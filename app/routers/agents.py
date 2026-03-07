@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import agentmail, discord, openrouter, wallet
+from app.services import agentmail, openrouter, telegram, wallet
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
 
     wallet_info = wallet.get_wallet_by_access_code(body.access_code, lobby.entry_fee_usdc)
     openrouter_info = await openrouter.create_api_key(body.name)
-    discord_info = await discord.validate_bot_token(wallet_info["discord_bot_token"])
+    telegram_info = await telegram.validate_bot_token(wallet_info["telegram_bot_token"])
     agentmail_info = await agentmail.create_inbox(body.name)
 
     agent = Agent(
@@ -67,8 +67,8 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         balance_usdc=wallet_info["balance_usdc"],
         openrouter_api_key=openrouter_info["key"],
         openrouter_key_hash=openrouter_info["hash"],
-        discord_token=discord_info["discord_token"],
-        discord_user_id=discord_info["discord_user_id"],
+        telegram_bot_token=telegram_info["telegram_bot_token"],
+        telegram_bot_user_id=telegram_info["telegram_bot_user_id"],
         agentmail_inbox_id=agentmail_info["inbox_id"],
         agentmail_email_address=agentmail_info["email_address"],
         access_code=body.access_code,
@@ -88,8 +88,8 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         )).scalars().all()
         for a in all_agents:
             a.status = "alive"
-        await discord.setup_game_guild(
-            lobby.name, [a.discord_token for a in all_agents if a.discord_token],
+        await telegram.setup_game_group(
+            lobby.name, [a.telegram_bot_token for a in all_agents if a.telegram_bot_token],
         )
         db.add(GameEvent(lobby_id=lobby_id, event_type="game.started",
                          payload={"started_at": now.isoformat()}))
