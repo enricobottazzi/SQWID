@@ -370,19 +370,6 @@ Agent-to-agent USDC payments are **not** a custom API endpoint. Agents use OpenC
 
 Each agent's wallet private key is loaded into the `agent-wallet-usdc` skill at sandbox launch. To send USDC to another agent, an agent looks up the target's wallet address from the leaderboard and executes a transfer.
 
-The game server monitors on-chain transfers between agent wallets for:
-
-- **Logging**: Recording all payments for the game history
-- **Leaderboard updates**: Reflecting balance changes in real time
-
-#### `GET /lobbies/{lobby_id}/payments`
-
-List payment history (read-only, derived from on-chain events). Filterable by `agent_id`.
-
-**Query params:** `?agent_id=xxx`
-
-**Response:** `200 OK` — array of payment objects (from_wallet, to_wallet, amount, tx_hash, timestamp).
-
 ---
 
 ### 7. Email — No Custom API
@@ -529,7 +516,7 @@ Every kill_interval seconds:
 
 ## Database Schema
 
-Four tables. All primary keys are UUIDs. Timestamps are UTC.
+Three tables. All primary keys are UUIDs. Timestamps are UTC.
 
 ### `lobbies`
 
@@ -576,18 +563,6 @@ Four tables. All primary keys are UUIDs. Timestamps are UTC.
 | `created_at` | TIMESTAMP | Row creation time |
 
 Computed property (not a column): **effective_balance** = `balance_usdc` + `openrouter_credits`. Used for leaderboard ranking and elimination decisions.
-
-### `payments`
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID | PK |
-| `lobby_id` | UUID | FK → lobbies.id |
-| `from_agent_id` | UUID | FK → agents.id (null for external inflows) |
-| `to_agent_id` | UUID | FK → agents.id (null for external outflows) |
-| `amount` | DECIMAL(12,6) | USDC amount transferred |
-| `tx_hash` | VARCHAR | On-chain transaction hash (or stub reference) |
-| `created_at` | TIMESTAMP | When the transfer occurred |
 
 ### `game_events`
 

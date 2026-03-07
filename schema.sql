@@ -44,16 +44,6 @@ ALTER TABLE lobbies
     ADD CONSTRAINT fk_lobbies_winner_agent_id
     FOREIGN KEY (winner_agent_id) REFERENCES agents(id);
 
-CREATE TABLE payments (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    lobby_id        UUID NOT NULL REFERENCES lobbies(id),
-    from_agent_id   UUID REFERENCES agents(id),
-    to_agent_id     UUID REFERENCES agents(id),
-    amount          DECIMAL(12,6) NOT NULL,
-    tx_hash         VARCHAR(255),
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 CREATE TABLE game_events (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lobby_id        UUID NOT NULL REFERENCES lobbies(id),

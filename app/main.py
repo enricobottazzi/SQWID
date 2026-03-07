@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app.database import async_session
 from app.models import Lobby
-from app.routers import lobbies, agents, game, payments
+from app.routers import lobbies, agents, game
 from app.services.credit_manager import run_credit_manager_cycle
 
 logger = logging.getLogger(__name__)
@@ -58,4 +58,3 @@ app = FastAPI(title="Squid Games OpenClaw", version="0.1.0", lifespan=lifespan)
 app.include_router(lobbies.router)
 app.include_router(agents.router)
 app.include_router(game.router)
-app.include_router(payments.router)

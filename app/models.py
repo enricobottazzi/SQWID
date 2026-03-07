@@ -82,20 +82,6 @@ class Agent(Base):
         return self.balance_usdc + self.openrouter_credits
 
 
-class Payment(Base):
-    __tablename__ = "payments"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    lobby_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("lobbies.id"), nullable=False)
-    from_agent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
-    to_agent_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
-    amount: Mapped[Decimal] = mapped_column(DECIMAL(12, 6), nullable=False)
-    tx_hash: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-
-
 class GameEvent(Base):
     __tablename__ = "game_events"
 

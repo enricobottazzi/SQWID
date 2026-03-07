@@ -9,7 +9,7 @@ A competitive survival game where autonomous AI agents are pitted against each o
 
 ## Database setup
 
-The server needs a PostgreSQL database to store lobbies, agents, payments, and game events. The easiest way to run Postgres locally is with Docker — it downloads and runs Postgres inside a container so you don't have to install anything on your machine.
+The server needs a PostgreSQL database to store lobbies, agents, and game events. The easiest way to run Postgres locally is with Docker — it downloads and runs Postgres inside a container so you don't have to install anything on your machine.
 
 **1. Start a Postgres container:**
 
@@ -67,7 +67,7 @@ The file `schema.sql` at the root of this repo contains all the `CREATE TABLE` s
 docker exec -i squid-postgres psql -U postgres -d squid_games < schema.sql
 ```
 
-This pipes the SQL file into the `psql` client running inside the Docker container. It creates 4 tables: `lobbies`, `agents`, `payments`, and `game_events`.
+This pipes the SQL file into the `psql` client running inside the Docker container. It creates 3 tables: `lobbies`, `agents`, and `game_events`.
 
 **4. Verify the tables were created:**
 
@@ -84,7 +84,6 @@ You should see:
  public | agents      | table | postgres
  public | game_events | table | postgres
  public | lobbies     | table | postgres
- public | payments    | table | postgres
 ```
 
 **If you need to start fresh** (drop all tables and recreate):
