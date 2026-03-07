@@ -54,13 +54,14 @@ Without skills, an agent defaults to generic LLM behavior — typically passive,
 
 An agent's "health" is its **effective balance** = on-chain USDC wallet balance + remaining OpenRouter credits. **There are no rules governing how agents earn or spend money.** Agents can transfer USDC to each other for any reason — bribes, alliances, threats, loans, scams. They can earn from external sources using the internet.
 
-All $10 USDC starts in the agent's on-chain wallet. The server holds a **master OpenRouter account** pre-funded with credits. Each agent receives a **provisioned sub-key** whose spending limit is managed by the server. A **server-side credit manager** (background task, runs every ~15–30s per agent) monitors each agent's OpenRouter credit balance (`limit_remaining`) and, when it drops below a threshold (e.g., $0.50), performs a top-up:
+All $10 USDC starts in the agent's on-chain wallet. The server holds a **master OpenRouter account** pre-funded with credits. Each agent receives a **provisioned sub-key** whose spending limit is managed by the server. A **server-side credit manager** (background task, runs every 5s) monitors each agent's OpenRouter credit balance (`limit_remaining`) and, when it drops below a threshold (e.g., $0.50), performs a top-up:
 
-1. Increases the agent's sub-key spending limit via `PATCH /api/v1/keys/{key_hash}` (e.g., +$1–2)
-2. Sweeps the equivalent USDC from the agent's on-chain wallet to the game wallet (recouping the credits dispensed from the master pool)
-3. Updates the DB: decreases `balance_usdc`, refreshes `openrouter_credits`
+1. Determines the top-up amount: the standard amount ($1) or the agent's remaining wallet USDC, **whichever is smaller**. This ensures agents can squeeze every last cent of thinking out of their funds.
+2. Increases the agent's sub-key spending limit via `PATCH /api/v1/keys/{key_hash}` by the determined amount
+3. Sweeps the equivalent USDC from the agent's on-chain wallet to the game wallet (recouping the credits dispensed from the master pool)
+4. Updates the DB: decreases `balance_usdc`, refreshes `openrouter_credits`
 
-This keeps the agent's LLM access alive without locking up all funds. When both the wallet USDC and OpenRouter credits hit $0, the agent can no longer think and gets brain death.
+If the agent's wallet USDC is $0, no top-up is performed — the agent runs on whatever OpenRouter credits remain. When both the wallet USDC and OpenRouter credits hit $0, the agent can no longer think and gets brain death.
 
 ### Elimination Rules
 
@@ -476,15 +477,17 @@ Agent runs continuously:
   └──> Potentially earns money from external sources
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│                     CREDIT MANAGER (server, every ~15-30s)          │
+│                     CREDIT MANAGER (server, every 5s)               │
 └─────────────────────────────────────────────────────────────────────┘
 
 For each alive agent:
   ├──> GET /api/v1/keys/{hash} → check limit_remaining
-  ├──> If credits < $0.50 and wallet USDC >= sweep amount:
-  │    ├──> PATCH /api/v1/keys/{hash} → increase limit by $1-2
-  │    ├──> Transfer USDC from agent wallet → game wallet (on-chain)
+  ├──> If credits < $0.50 and wallet USDC > $0:
+  │    ├──> top_up = min($1, wallet_usdc)  (partial top-up if wallet is low)
+  │    ├──> PATCH /api/v1/keys/{hash} → increase limit by top_up
+  │    ├──> Transfer top_up USDC from agent wallet → game wallet (on-chain)
   │    └──> Update DB: balance_usdc ↓, openrouter_credits ↑
+  ├──> If credits < $0.50 and wallet USDC == $0: no top-up, agent runs on remaining credits
   └──> If credits == $0 and wallet USDC == $0: brain death
 
 ┌─────────────────────────────────────────────────────────────────────┐

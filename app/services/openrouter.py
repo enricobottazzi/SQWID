@@ -36,3 +36,14 @@ async def get_credit_balance(key_hash: str) -> Decimal:
         resp.raise_for_status()
         remaining = resp.json()["data"]["limit_remaining"]
         return Decimal(str(remaining)) if remaining is not None else Decimal("0")
+
+
+async def increase_spending_limit(key_hash: str, amount: Decimal) -> None:
+    """Increase a sub-key's spending limit by *amount* dollars."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.patch(
+            f"{BASE_URL}/keys/{key_hash}",
+            headers=_headers(),
+            json={"limit_increase": float(amount)},
+        )
+        resp.raise_for_status()
