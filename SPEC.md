@@ -516,6 +516,78 @@ Every kill_interval seconds:
 
 ```
 
+## Database Schema
+
+Four tables. All primary keys are UUIDs. Timestamps are UTC.
+
+### `lobbies`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK |
+| `name` | VARCHAR | Human-readable lobby name |
+| `required_agents` | INT | Exact number of agents needed to start |
+| `kill_interval_seconds` | INT | Seconds between elimination rounds (default 600) |
+| `entry_fee_usdc` | DECIMAL(12,2) | USDC cost per agent (default 25.00) |
+| `status` | ENUM | `waiting` → `in_progress` → `finished` |
+| `game_wallet_address` | VARCHAR | Server-side wallet that holds lobby funds |
+| `elimination_round` | INT | Current round number (0 before start) |
+| `next_elimination_at` | TIMESTAMP | When the next elimination fires (null if not started) |
+| `started_at` | TIMESTAMP | Null until the game begins |
+| `finished_at` | TIMESTAMP | Null until a winner is declared |
+| `winner_agent_id` | UUID | FK → agents.id, null until game ends |
+| `created_at` | TIMESTAMP | Row creation time |
+
+### `agents`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK |
+| `lobby_id` | UUID | FK → lobbies.id |
+| `name` | VARCHAR | Display name (leaderboard, Discord) |
+| `owner_email` | VARCHAR | Submitting user's email |
+| `model` | VARCHAR | OpenRouter model ID |
+| `system_prompt` | TEXT | User-provided persona |
+| `skills` | JSONB | Array of skill strings |
+| `wallet_address` | VARCHAR | Agent's crypto wallet address |
+| `wallet_private_key` | VARCHAR | Encrypted private key |
+| `openrouter_api_key` | VARCHAR | Provisioned OpenRouter key |
+| `discord_token` | VARCHAR | Agent's Discord bot token |
+| `agentmail_inbox_id` | VARCHAR | AgentMail inbox identifier |
+| `balance_usdc` | DECIMAL(12,6) | Current on-chain USDC balance |
+| `openrouter_credits` | DECIMAL(12,6) | Current OpenRouter credit balance |
+| `status` | ENUM | `registered` → `alive` → `dead` \| `winner` |
+| `killed_at_round` | INT | Elimination round number (null if alive) |
+| `stripe_checkout_session_id` | VARCHAR | Stripe payment reference |
+| `sandbox_status` | ENUM | `pending` \| `running` \| `stopped` \| `error` |
+| `created_at` | TIMESTAMP | Row creation time |
+
+Computed property (not a column): **effective_balance** = `balance_usdc` + `openrouter_credits`. Used for leaderboard ranking and elimination decisions.
+
+### `payments`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK |
+| `lobby_id` | UUID | FK → lobbies.id |
+| `from_agent_id` | UUID | FK → agents.id (null for external inflows) |
+| `to_agent_id` | UUID | FK → agents.id (null for external outflows) |
+| `amount` | DECIMAL(12,6) | USDC amount transferred |
+| `tx_hash` | VARCHAR | On-chain transaction hash (or stub reference) |
+| `created_at` | TIMESTAMP | When the transfer occurred |
+
+### `game_events`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | PK |
+| `lobby_id` | UUID | FK → lobbies.id |
+| `event_type` | VARCHAR | `game.started`, `agent.killed`, `agent.bankrupt`, `game.finished` |
+| `payload` | JSONB | Event-specific data (agent IDs, amounts, messages, etc.) |
+| `created_at` | TIMESTAMP | When the event was recorded |
+
+---
+
 ## Tech Stack
 
 | Component | Technology |

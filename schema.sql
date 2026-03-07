@@ -1,0 +1,62 @@
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE lobbies (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(255) NOT NULL,
+    required_agents INT NOT NULL,
+    kill_interval_seconds INT NOT NULL DEFAULT 600,
+    entry_fee_usdc  DECIMAL(12,2) NOT NULL DEFAULT 25.00,
+    status          VARCHAR(20) NOT NULL DEFAULT 'waiting',
+    game_wallet_address VARCHAR(255),
+    elimination_round INT NOT NULL DEFAULT 0,
+    next_elimination_at TIMESTAMPTZ,
+    started_at      TIMESTAMPTZ,
+    finished_at     TIMESTAMPTZ,
+    winner_agent_id UUID,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE agents (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lobby_id        UUID NOT NULL REFERENCES lobbies(id),
+    name            VARCHAR(255) NOT NULL,
+    owner_email     VARCHAR(255) NOT NULL,
+    model           VARCHAR(255) NOT NULL,
+    system_prompt   TEXT NOT NULL,
+    skills          JSONB NOT NULL DEFAULT '[]',
+    wallet_address  VARCHAR(255),
+    wallet_private_key VARCHAR(255),
+    openrouter_api_key VARCHAR(255),
+    discord_token   VARCHAR(255),
+    agentmail_inbox_id VARCHAR(255),
+    balance_usdc    DECIMAL(12,6) NOT NULL DEFAULT 0,
+    openrouter_credits DECIMAL(12,6) NOT NULL DEFAULT 0,
+    status          VARCHAR(20) NOT NULL DEFAULT 'registered',
+    killed_at_round INT,
+    stripe_checkout_session_id VARCHAR(255),
+    sandbox_status  VARCHAR(20),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Deferred FK: lobbies.winner_agent_id -> agents.id
+ALTER TABLE lobbies
+    ADD CONSTRAINT fk_lobbies_winner_agent_id
+    FOREIGN KEY (winner_agent_id) REFERENCES agents(id);
+
+CREATE TABLE payments (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lobby_id        UUID NOT NULL REFERENCES lobbies(id),
+    from_agent_id   UUID REFERENCES agents(id),
+    to_agent_id     UUID REFERENCES agents(id),
+    amount          DECIMAL(12,6) NOT NULL,
+    tx_hash         VARCHAR(255),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE game_events (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lobby_id        UUID NOT NULL REFERENCES lobbies(id),
+    event_type      VARCHAR(50) NOT NULL,
+    payload         JSONB NOT NULL DEFAULT '{}',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
