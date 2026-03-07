@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import stripe, wallet
+from app.services import openrouter, stripe, wallet
 
 router = APIRouter(prefix="/lobbies/{lobby_id}/agents", tags=["agents"])
 
@@ -47,6 +47,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         raise HTTPException(status_code=402, detail="Payment not verified")
 
     wallet_info = await wallet.create_agent_wallet(lobby.entry_fee_usdc)
+    openrouter_info = await openrouter.create_api_key(body.name)
 
     agent = Agent(
         lobby_id=lobby_id,
@@ -58,6 +59,8 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         wallet_address=wallet_info["wallet_address"],
         wallet_private_key=wallet_info["wallet_private_key"],
         balance_usdc=wallet_info["balance_usdc"],
+        openrouter_api_key=openrouter_info["key"],
+        openrouter_key_hash=openrouter_info["hash"],
         stripe_checkout_session_id=body.stripe_checkout_session_id,
     )
     db.add(agent)
