@@ -38,6 +38,7 @@ CREATE TABLE agents (
     killed_at_round INT,
     access_code     VARCHAR(255),
     sandbox_status  VARCHAR(20),
+    droplet_id      INT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

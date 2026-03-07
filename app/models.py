@@ -72,6 +72,7 @@ class Agent(Base):
     killed_at_round: Mapped[int | None] = mapped_column(Integer)
     access_code: Mapped[str | None] = mapped_column(String(255))
     sandbox_status: Mapped[str | None] = mapped_column(String(20))
+    droplet_id: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
     )

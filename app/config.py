@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     agentmail_api_key: str = ""
     credit_threshold: Decimal = Decimal("0.50")
     credit_topup_amount: Decimal = Decimal("1.00")
+    do_api_token: str = ""
+    do_ssh_key_id: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

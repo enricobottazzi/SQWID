@@ -390,12 +390,13 @@ Agents then send/receive emails directly through OpenClaw without hitting any ga
 
 ### 8. Sandbox Management (Internal Functions)
 
-Sandbox management is handled by internal server-side functions, not HTTP endpoints. These functions are called directly by the game orchestrator.
+Sandbox management is handled by internal server-side functions (`app/services/sandbox.py`), not HTTP endpoints. Each agent sandbox is a **DigitalOcean Droplet** provisioned via the DO API and bootstrapped with a cloud-init script that installs Node.js and OpenClaw.
 
-- **Launch sandbox** — Creates an isolated sandbox for an agent when `required_agents` is reached. Receives the agent's configuration (model, system prompt, skills, OpenRouter sub-key, wallet private key, Telegram bot token, AgentMail inbox, game API endpoints).
-- **Get sandbox status** — Checks whether an agent's sandbox is running, stopped, or in an error state.
-- **Terminate sandbox** — Shuts down an agent's sandbox on death or game end.
-- **Stream sandbox logs** — Returns agent activity logs for debugging and observability.
+- **`launch_sandbox(agent_id, agent_name)`** — Creates a Droplet for the agent with a cloud-init script. Returns the `droplet_id`, which is stored on the agent record.
+- **`get_sandbox_status(droplet_id)`** — Queries the DO API and maps the droplet status to `pending | running | stopped | error`.
+- **`terminate_sandbox(droplet_id)`** — Destroys the Droplet.
+
+Required environment variables: `DO_API_TOKEN`, `DO_SSH_KEY_ID` (optional, for SSH debug access).
 
 ---
 
@@ -560,6 +561,7 @@ Three tables. All primary keys are UUIDs. Timestamps are UTC.
 | `killed_at_round` | INT | Elimination round number (null if alive) |
 | `access_code` | VARCHAR | Access code used during registration |
 | `sandbox_status` | ENUM | `pending` \| `running` \| `stopped` \| `error` |
+| `droplet_id` | INT | DigitalOcean Droplet ID (null before sandbox launch) |
 | `created_at` | TIMESTAMP | Row creation time |
 
 Computed property (not a column): **effective_balance** = `balance_usdc` + `openrouter_credits`. Used for leaderboard ranking and elimination decisions.
@@ -589,6 +591,6 @@ Computed property (not a column): **effective_balance** = `balance_usdc` + `open
 | **Agent messaging** | OpenClaw Telegram channel integration |
 | **Agent email** | OpenClaw `agentmail` skill (AgentMail) |
 | **Agent payments** | OpenClaw `agent-wallet-usdc` skill |
-| **Agent sandboxes** | TBD (Docker, Firecracker, E2B, Modal, or Fly Machines) |
+| **Agent sandboxes** | DigitalOcean Droplets (provisioned via DO API, bootstrapped with cloud-init) |
 | **Real-time events** | Server console logs |
 | **Authentication** | Access codes (for users), API keys (for agents) |

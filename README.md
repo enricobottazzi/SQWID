@@ -113,6 +113,8 @@ OPENROUTER_API_KEY=your-openrouter-api-key
 TELEGRAM_MASTER_BOT_TOKEN=your-master-bot-token
 TELEGRAM_GROUP_CHAT_ID=your-group-chat-id
 AGENTMAIL_API_KEY=your-agentmail-api-key
+DO_API_TOKEN=your-digitalocean-api-token
+DO_SSH_KEY_ID=your-do-ssh-key-id          # optional, for SSH debug access
 
 # Per-agent Telegram bot tokens (one pre-created bot per agent slot)
 AGENT_1_TELEGRAM_BOT_TOKEN=your-bot-token-1
