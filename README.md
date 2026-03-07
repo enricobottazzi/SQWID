@@ -124,3 +124,19 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 The API is now available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
+
+## Running tests
+
+Tests use an in-memory SQLite database, so you don't need Docker or Postgres running.
+
+1. **Install test dependencies** (if you haven't already):
+
+```bash
+pip install pytest pytest-asyncio httpx aiosqlite
+```
+
+2. **Run the test suite:**
+
+```bash
+python -m pytest tests/ -v
+```

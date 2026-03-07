@@ -2,47 +2,91 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.models import Agent, Lobby
+from app.schemas import AgentCreate, AgentResponse
+from app.services import stripe, wallet
 
 router = APIRouter(prefix="/lobbies/{lobby_id}/agents", tags=["agents"])
 
 
-@router.post("/", status_code=201)
-async def register_agent(lobby_id: UUID):
-    """Register a new agent for a lobby.
-
-    The user must have completed Stripe payment beforehand. Accepts agent name,
-    owner email, OpenRouter model ID, system prompt, skills, and the Stripe
-    checkout session ID.
-
-    Server-side effects:
-    - Verifies Stripe payment (stubbed: always succeeds)
-    - Creates a crypto wallet for the agent (stubbed: in-DB balance)
-    - Creates an OpenRouter API key (real integration)
-    - Creates an AgentMail inbox (stubbed)
-    - Registers the agent in the lobby
-
-    If this registration fills the lobby to its required_agents count, the game
-    starts automatically.
-
-    Returns the created agent with wallet address and status "registered".
-    """
-    raise NotImplementedError
+def _agent_to_response(agent: Agent) -> AgentResponse:
+    return AgentResponse(
+        agent_id=agent.id,
+        lobby_id=agent.lobby_id,
+        name=agent.name,
+        owner_email=agent.owner_email,
+        agent_wallet_address=agent.wallet_address,
+        model=agent.model,
+        status=agent.status,
+        created_at=agent.created_at,
+    )
 
 
-@router.get("/")
-async def list_agents(lobby_id: UUID):
-    """List all agents in a lobby.
+@router.post("/", status_code=201, response_model=AgentResponse)
+async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = Depends(get_db)):
+    lobby = await db.get(Lobby, lobby_id)
+    if lobby is None:
+        raise HTTPException(status_code=404, detail="Lobby not found")
+    if lobby.status != "waiting":
+        raise HTTPException(status_code=409, detail="Lobby is not accepting registrations")
 
-    Returns an array of agent objects with names, statuses, and balances.
-    """
-    raise NotImplementedError
+    agent_count_result = await db.execute(
+        select(func.count()).select_from(Agent).where(Agent.lobby_id == lobby_id)
+    )
+    agent_count = agent_count_result.scalar_one()
+    if agent_count >= lobby.required_agents:
+        raise HTTPException(status_code=409, detail="Lobby is already full")
+
+    paid = await stripe.verify_checkout_session(body.stripe_checkout_session_id)
+    if not paid:
+        raise HTTPException(status_code=402, detail="Payment not verified")
+
+    wallet_info = await wallet.create_agent_wallet(lobby.entry_fee_usdc)
+
+    agent = Agent(
+        lobby_id=lobby_id,
+        name=body.name,
+        owner_email=body.owner_email,
+        model=body.model,
+        system_prompt=body.system_prompt,
+        skills=body.skills,
+        wallet_address=wallet_info["wallet_address"],
+        wallet_private_key=wallet_info["wallet_private_key"],
+        balance_usdc=wallet_info["balance_usdc"],
+        stripe_checkout_session_id=body.stripe_checkout_session_id,
+    )
+    db.add(agent)
+    await db.commit()
+    await db.refresh(agent)
+
+    # Check if the lobby is now full — if so, the game will auto-start (handled in a later step)
+    new_count = agent_count + 1
+    if new_count >= lobby.required_agents:
+        lobby.status = "in_progress"
+        await db.commit()
+
+    return _agent_to_response(agent)
 
 
-@router.get("/{agent_id}")
-async def get_agent(lobby_id: UUID, agent_id: UUID):
-    """Get details for a specific agent.
+@router.get("/", response_model=list[AgentResponse])
+async def list_agents(lobby_id: UUID, db: AsyncSession = Depends(get_db)):
+    lobby = await db.get(Lobby, lobby_id)
+    if lobby is None:
+        raise HTTPException(status_code=404, detail="Lobby not found")
 
-    Returns the full agent object including current balance and status.
-    """
-    raise NotImplementedError
+    result = await db.execute(select(Agent).where(Agent.lobby_id == lobby_id))
+    agents = result.scalars().all()
+    return [_agent_to_response(a) for a in agents]
+
+
+@router.get("/{agent_id}", response_model=AgentResponse)
+async def get_agent(lobby_id: UUID, agent_id: UUID, db: AsyncSession = Depends(get_db)):
+    agent = await db.get(Agent, agent_id)
+    if agent is None or agent.lobby_id != lobby_id:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return _agent_to_response(agent)
