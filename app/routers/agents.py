@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import openrouter, stripe, wallet
+from app.services import openrouter, wallet
 
 router = APIRouter(prefix="/lobbies/{lobby_id}/agents", tags=["agents"])
 
@@ -42,11 +42,10 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
     if agent_count >= lobby.required_agents:
         raise HTTPException(status_code=409, detail="Lobby is already full")
 
-    paid = await stripe.verify_checkout_session(body.stripe_checkout_session_id)
-    if not paid:
-        raise HTTPException(status_code=402, detail="Payment not verified")
+    if not wallet.validate_access_code(body.access_code):
+        raise HTTPException(status_code=403, detail="Invalid access code")
 
-    wallet_info = await wallet.create_agent_wallet(lobby.entry_fee_usdc)
+    wallet_info = wallet.get_wallet_by_access_code(body.access_code, lobby.entry_fee_usdc)
     openrouter_info = await openrouter.create_api_key(body.name)
 
     agent = Agent(
@@ -61,7 +60,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         balance_usdc=wallet_info["balance_usdc"],
         openrouter_api_key=openrouter_info["key"],
         openrouter_key_hash=openrouter_info["hash"],
-        stripe_checkout_session_id=body.stripe_checkout_session_id,
+        access_code=body.access_code,
     )
     db.add(agent)
     await db.commit()

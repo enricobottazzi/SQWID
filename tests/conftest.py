@@ -84,8 +84,18 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_db] = _override_get_db
 
     mock_key = AsyncMock(return_value={"key": "sk-or-test-key", "hash": "test-hash"})
+    test_wallets = {
+        f"test-access-code-{i}": {
+            "wallet_address": f"0xTestWalletAddress{i}",
+            "wallet_private_key": f"0xTestPrivateKey{i}",
+        }
+        for i in range(1, 4)
+    }
     transport = ASGITransport(app=app)
-    with patch("app.services.openrouter.create_api_key", mock_key):
+    with (
+        patch("app.services.openrouter.create_api_key", mock_key),
+        patch("app.services.wallet._ACCESS_CODE_WALLETS", test_wallets),
+    ):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
 

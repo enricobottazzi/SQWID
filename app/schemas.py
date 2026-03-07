@@ -14,7 +14,7 @@ class LobbyCreate(BaseModel):
     name: str
     required_agents: int
     kill_interval_seconds: int = 600
-    entry_fee_usdc: float = 25.0
+    entry_fee_usdc: float = 10.0
 
 
 class LobbyResponse(BaseModel):
@@ -39,7 +39,7 @@ class AgentCreate(BaseModel):
     model: str
     system_prompt: str
     skills: list[str] = []
-    stripe_checkout_session_id: str
+    access_code: str
 
 
 class AgentResponse(BaseModel):

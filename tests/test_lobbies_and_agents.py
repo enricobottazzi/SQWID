@@ -30,7 +30,7 @@ AGENT_PAYLOAD = {
     "model": "gpt-4o",
     "system_prompt": "You are agent alpha.",
     "skills": ["negotiation"],
-    "stripe_checkout_session_id": "cs_test_abc123",
+    "access_code": "test-access-code-1",
 }
 
 
@@ -149,11 +149,11 @@ class TestRegisterAgent:
     async def test_lobby_full_returns_409(self, client: AsyncClient):
         lobby = await _create_lobby(client, name="SmallLobby", required_agents=2)
         lid = lobby["lobby_id"]
-        _, s1 = await _register_agent(client, lid, name="A1", stripe_checkout_session_id="cs_1")
+        _, s1 = await _register_agent(client, lid, name="A1", access_code="test-access-code-1")
         assert s1 == 201
-        _, s2 = await _register_agent(client, lid, name="A2", stripe_checkout_session_id="cs_2")
+        _, s2 = await _register_agent(client, lid, name="A2", access_code="test-access-code-2")
         assert s2 == 201
-        _, s3 = await _register_agent(client, lid, name="A3", stripe_checkout_session_id="cs_3")
+        _, s3 = await _register_agent(client, lid, name="A3", access_code="test-access-code-3")
         assert s3 == 409
 
     async def test_lobby_auto_starts_when_full(
@@ -165,8 +165,8 @@ class TestRegisterAgent:
         resp = await client.get(f"/lobbies/{lid}")
         assert resp.json()["status"] == "waiting"
 
-        await _register_agent(client, lid, name="A1", stripe_checkout_session_id="cs_a1")
-        await _register_agent(client, lid, name="A2", stripe_checkout_session_id="cs_a2")
+        await _register_agent(client, lid, name="A1", access_code="test-access-code-1")
+        await _register_agent(client, lid, name="A2", access_code="test-access-code-2")
 
         resp = await client.get(f"/lobbies/{lid}")
         assert resp.json()["status"] == "in_progress"
@@ -180,7 +180,7 @@ class TestDeleteLobbyNotWaiting:
     async def test_cannot_delete_in_progress_lobby(self, client: AsyncClient):
         lobby = await _create_lobby(client, name="InProgressDelete", required_agents=1)
         lid = lobby["lobby_id"]
-        await _register_agent(client, lid, name="FillIt", stripe_checkout_session_id="cs_fill")
+        await _register_agent(client, lid, name="FillIt", access_code="test-access-code-1")
 
         resp = await client.get(f"/lobbies/{lid}")
         assert resp.json()["status"] == "in_progress"
@@ -198,8 +198,8 @@ class TestListAgents:
     async def test_list_agents_in_lobby(self, client: AsyncClient):
         lobby = await _create_lobby(client, name="ListAgentsLobby", required_agents=5)
         lid = lobby["lobby_id"]
-        await _register_agent(client, lid, name="X1", stripe_checkout_session_id="cs_x1")
-        await _register_agent(client, lid, name="X2", stripe_checkout_session_id="cs_x2")
+        await _register_agent(client, lid, name="X1", access_code="test-access-code-1")
+        await _register_agent(client, lid, name="X2", access_code="test-access-code-2")
 
         resp = await client.get(f"/lobbies/{lid}/agents/")
         assert resp.status_code == 200
@@ -218,7 +218,7 @@ class TestGetAgent:
         lobby = await _create_lobby(client, name="GetAgentLobby", required_agents=5)
         lid = lobby["lobby_id"]
         agent_data, _ = await _register_agent(
-            client, lid, name="FindMe", stripe_checkout_session_id="cs_find"
+            client, lid, name="FindMe", access_code="test-access-code-1"
         )
 
         resp = await client.get(f"/lobbies/{lid}/agents/{agent_data['agent_id']}")
@@ -235,7 +235,7 @@ class TestGetAgent:
         lobby1 = await _create_lobby(client, name="WrongLobby1", required_agents=5)
         lobby2 = await _create_lobby(client, name="WrongLobby2", required_agents=5)
         agent_data, _ = await _register_agent(
-            client, lobby1["lobby_id"], name="CrossCheck", stripe_checkout_session_id="cs_cross"
+            client, lobby1["lobby_id"], name="CrossCheck", access_code="test-access-code-1"
         )
         resp = await client.get(f"/lobbies/{lobby2['lobby_id']}/agents/{agent_data['agent_id']}")
         assert resp.status_code == 404

@@ -5,7 +5,7 @@ CREATE TABLE lobbies (
     name            VARCHAR(255) NOT NULL,
     required_agents INT NOT NULL,
     kill_interval_seconds INT NOT NULL DEFAULT 600,
-    entry_fee_usdc  DECIMAL(12,2) NOT NULL DEFAULT 25.00,
+    entry_fee_usdc  DECIMAL(12,2) NOT NULL DEFAULT 10.00,
     status          VARCHAR(20) NOT NULL DEFAULT 'waiting',
     game_wallet_address VARCHAR(255),
     elimination_round INT NOT NULL DEFAULT 0,
@@ -33,7 +33,7 @@ CREATE TABLE agents (
     openrouter_credits DECIMAL(12,6) NOT NULL DEFAULT 0,
     status          VARCHAR(20) NOT NULL DEFAULT 'registered',
     killed_at_round INT,
-    stripe_checkout_session_id VARCHAR(255),
+    access_code     VARCHAR(255),
     sandbox_status  VARCHAR(20),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );

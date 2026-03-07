@@ -27,7 +27,7 @@ class Lobby(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     required_agents: Mapped[int] = mapped_column(Integer, nullable=False)
     kill_interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=600)
-    entry_fee_usdc: Mapped[Decimal] = mapped_column(DECIMAL(12, 2), nullable=False, default=Decimal("25.00"))
+    entry_fee_usdc: Mapped[Decimal] = mapped_column(DECIMAL(12, 2), nullable=False, default=Decimal("10.00"))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="waiting")
     game_wallet_address: Mapped[str | None] = mapped_column(String(255))
     elimination_round: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -68,7 +68,7 @@ class Agent(Base):
     openrouter_credits: Mapped[Decimal] = mapped_column(DECIMAL(12, 6), nullable=False, default=Decimal("0"))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="registered")
     killed_at_round: Mapped[int | None] = mapped_column(Integer)
-    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(255))
+    access_code: Mapped[str | None] = mapped_column(String(255))
     sandbox_status: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
