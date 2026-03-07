@@ -1,5 +1,6 @@
 """Game lifecycle, leaderboard endpoints, and elimination loop."""
 
+import logging
 import random
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -13,6 +14,8 @@ from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import GameStateResponse, LeaderboardEntry, LeaderboardResponse
 from app.services import openrouter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/lobbies/{lobby_id}", tags=["game"])
 
@@ -114,6 +117,7 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
             a.killed_at_round = round_num
             db.add(GameEvent(lobby_id=lobby.id, event_type="agent.bankrupt",
                              payload={"agent_id": str(a.id), "round": round_num}))
+            logger.info("[agent.bankrupt] lobby=%s agent=%s round=%d", lobby.id, a.id, round_num)
     alive = [a for a in alive if a.status == "alive"]
 
     if len(alive) <= 1:
@@ -135,6 +139,7 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
 
     db.add(GameEvent(lobby_id=lobby.id, event_type="agent.killed",
                      payload={"agent_id": str(victim.id), "round": round_num}))
+    logger.info("[agent.killed] lobby=%s agent=%s round=%d", lobby.id, victim.id, round_num)
 
     if len(survivors) <= 1:
         _finish_game(lobby, survivors, db)
@@ -154,3 +159,5 @@ def _finish_game(lobby: Lobby, remaining: list[Agent], db: AsyncSession):
         lobby_id=lobby.id, event_type="game.finished",
         payload={"winner_agent_id": str(remaining[0].id) if remaining else None},
     ))
+    winner_id = remaining[0].id if remaining else None
+    logger.info("[game.finished] lobby=%s winner=%s", lobby.id, winner_id)

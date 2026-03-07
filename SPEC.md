@@ -402,15 +402,15 @@ Elimination is handled by an internal server-side function, not an HTTP endpoint
 
 ### 10. Admin & Observability
 
-#### `GET /admin/lobbies/{lobby_id}/events`
+#### Server Console Logs
 
-Server-Sent Events stream of all game events.
+Game events are logged to the server console (`INFO` level) whenever they are persisted to the `game_events` table.
 
-**Event types:**
-- `game.started` — game has begun
-- `agent.killed` — an agent was eliminated
-- `agent.bankrupt` — an agent hit $0
-- `game.finished` — a winner has been declared
+**Logged event types:**
+- `[game.started]` — game has begun
+- `[agent.killed]` — an agent was eliminated
+- `[agent.bankrupt]` — an agent hit $0
+- `[game.finished]` — a winner has been declared
 
 #### `GET /admin/lobbies/{lobby_id}/agents/{agent_id}/logs`
 
@@ -591,5 +591,5 @@ Computed property (not a column): **effective_balance** = `balance_usdc` + `open
 | **Agent email** | OpenClaw `agentmail` skill (AgentMail) |
 | **Agent payments** | OpenClaw `agent-wallet-usdc` skill |
 | **Agent sandboxes** | TBD (Docker, Firecracker, E2B, Modal, or Fly Machines) |
-| **Real-time events** | Server-Sent Events (SSE) |
+| **Real-time events** | Server console logs |
 | **Authentication** | Access codes (for users), API keys (for agents) |

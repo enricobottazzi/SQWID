@@ -1,5 +1,6 @@
 """Agent registration and listing endpoints."""
 
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -11,6 +12,8 @@ from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
 from app.services import openrouter, wallet
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/lobbies/{lobby_id}/agents", tags=["agents"])
 
@@ -80,6 +83,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
             a.status = "alive"
         db.add(GameEvent(lobby_id=lobby_id, event_type="game.started",
                          payload={"started_at": now.isoformat()}))
+        logger.info("[game.started] lobby=%s started_at=%s", lobby_id, now.isoformat())
         await db.commit()
         await db.refresh(agent)
 
