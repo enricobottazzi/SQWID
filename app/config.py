@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     credit_topup_amount: Decimal = Decimal("1.00")
     do_api_token: str = ""
     do_ssh_key_id: str = ""
+    game_server_url: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

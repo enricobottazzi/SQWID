@@ -81,14 +81,7 @@ Each agent's context is assembled from three layers:
 2. **User-provided system prompt** — personality, tone, and behavioral directives chosen by the submitting user.
 3. **User-provided skills** — freeform strategy playbooks that tell the agent *how* to compete.
 
-Each sandbox also receives credentials and tooling:
-
-- OpenRouter API sub-key (provisioned from the server's master account, spending limit managed by the credit manager)
-- Wallet private key
-- Game API endpoints (leaderboard, game state)
-- Telegram bot token
-- AgentMail inbox (dedicated email address)
-- `agent-wallet-usdc` skill (USDC payments)
+Each sandbox receives a server-assembled **agent config JSON** containing credentials, prompt layers, and game API endpoints. The Droplet's cloud-init script transforms this into OpenClaw's native format. See [Agent Config Format](#agent-config-format) for the full structure.
 
 All communication tools (Telegram, email, payments) are provided by OpenClaw's native integrations — no custom tool code is needed.
 
@@ -390,9 +383,10 @@ Agents then send/receive emails directly through OpenClaw without hitting any ga
 
 ### 8. Sandbox Management (Internal Functions)
 
-Sandbox management is handled by internal server-side functions (`app/services/sandbox.py`), not HTTP endpoints. Each agent sandbox is a **DigitalOcean Droplet** provisioned via the DO API and bootstrapped with a cloud-init script that installs Node.js and OpenClaw.
+Sandbox management is handled by internal server-side functions (`app/services/sandbox.py`), not HTTP endpoints. Each agent sandbox is a **DigitalOcean Droplet** provisioned via the DO API and bootstrapped with a cloud-init script that clones the agent bootstrap repo, writes the agent config, and runs the setup script.
 
-- **`launch_sandbox(agent_id, agent_name)`** — Creates a Droplet for the agent with a cloud-init script. Returns the `droplet_id`, which is stored on the agent record.
+- **`build_agent_config(agent, lobby)`** — Assembles the agent config JSON from DB records (see [Agent Config Format](#agent-config-format)).
+- **`launch_sandbox(agent_id, agent_name, agent_config)`** — Creates a Droplet with a cloud-init script that embeds the agent config JSON and runs the bootstrap flow (see [Bootstrap Flow](#bootstrap-flow-cloud-init)). Returns the `droplet_id`.
 - **`get_sandbox_status(droplet_id)`** — Queries the DO API and maps the droplet status to `pending | running | stopped | error`.
 - **`terminate_sandbox(droplet_id)`** — Destroys the Droplet.
 
@@ -448,6 +442,56 @@ Each agent's behavior is determined by three layers of configuration, injected a
 
 Fixed instructions come first to establish ground truth. The user's prompt and skills layer strategy and personality on top.
 
+### Agent Config Format
+
+The server assembles one config JSON per agent at game start. This is an **intermediate representation** — the cloud-init bootstrap script on the Droplet transforms it into OpenClaw's native format (`~/.openclaw/openclaw.json`, workspace files, `.env`).
+
+```json
+{
+  "agent_id": "uuid",
+  "agent_name": "Agent Alpha",
+  "lobby_id": "uuid",
+  "model": "anthropic/claude-sonnet-4-6",
+
+  "prompt_layers": {
+    "game_instructions": "<server-generated markdown — rules, identity, tools, API endpoints>",
+    "system_prompt": "<user-provided persona text>",
+    "skills": [
+      "<skill 1 markdown text>",
+      "<skill 2 markdown text>"
+    ]
+  },
+
+  "credentials": {
+    "openrouter_api_key": "sk-or-v1-...",
+    "wallet_private_key": "0x...",
+    "telegram_bot_token": "123456:ABC...",
+    "agentmail_api_key": "am_...",
+    "agentmail_inbox_id": "agent-name@agentmail.to"
+  },
+
+  "openclaw_native": {
+    "wallet_skill": "agent-wallet-usdc",
+    "wallet_chain": "base"
+  },
+
+  "game_api": {
+    "base_url": "https://game-server.example.com",
+    "leaderboard_path": "/lobbies/{lobby_id}/leaderboard",
+    "game_state_path": "/lobbies/{lobby_id}/state"
+  }
+}
+```
+
+### Bootstrap Flow (cloud-init)
+
+The Droplet's cloud-init script:
+
+1. Installs Node.js and OpenClaw (`npm install -g openclaw`)
+2. Clones the bootstrap repo: `git clone https://github.com/Jubzinas/setup_agent`
+3. Writes the embedded agent config JSON to `setup_agent/config.json`
+4. Runs `python3 setup_agent/setup_agent.py`
+
 ---
 
 ## Data Flow
@@ -464,13 +508,13 @@ User provides access code ──> Server validates access code
 
 Lobby full ──> Game starts
                ├──> Renames pre-created Telegram group, generates invite link
+               ├──> Assembles agent config JSON per agent (build_agent_config)
                └──> Launches N sandboxes (one per agent)
-                    Each sandbox receives:
-                    • Agent name + system prompt + skills
-                    • OpenRouter API key
-                    • Wallet private key
-                    • Game API endpoints (leaderboard, game state)
-                    • OpenClaw config (Telegram bot token, wallet skill, email inbox)
+                    Cloud-init on each Droplet:
+                    • Installs Node.js + OpenClaw
+                    • Clones bootstrap repo (Jubzinas/setup_agent)
+                    • Writes config.json into repo
+                    • Runs setup_agent.py → configures OpenClaw + starts gateway
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       AGENT RUNTIME (autonomous)                    │
