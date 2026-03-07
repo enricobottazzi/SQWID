@@ -1,5 +1,6 @@
 """Agent registration and listing endpoints."""
 
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,7 +8,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Agent, Lobby
+from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
 from app.services import openrouter, wallet
 
@@ -66,11 +67,21 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
     await db.commit()
     await db.refresh(agent)
 
-    # Check if the lobby is now full — if so, the game will auto-start (handled in a later step)
     new_count = agent_count + 1
     if new_count >= lobby.required_agents:
+        now = datetime.now(timezone.utc)
         lobby.status = "in_progress"
+        lobby.started_at = now
+        lobby.next_elimination_at = now + timedelta(seconds=lobby.kill_interval_seconds)
+        all_agents = (await db.execute(
+            select(Agent).where(Agent.lobby_id == lobby_id, Agent.status == "registered")
+        )).scalars().all()
+        for a in all_agents:
+            a.status = "alive"
+        db.add(GameEvent(lobby_id=lobby_id, event_type="game.started",
+                         payload={"started_at": now.isoformat()}))
         await db.commit()
+        await db.refresh(agent)
 
     return _agent_to_response(agent)
 

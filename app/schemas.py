@@ -53,3 +53,39 @@ class AgentResponse(BaseModel):
     model: str
     status: str
     created_at: datetime
+
+
+# ── Game State ──
+
+
+class GameStateResponse(BaseModel):
+    lobby_id: uuid.UUID
+    status: str
+    started_at: datetime | None
+    next_elimination_at: datetime | None
+    seconds_until_elimination: int | None
+    alive_agents: int
+    total_agents: int
+    elimination_round: int
+    winner_agent_id: uuid.UUID | None
+
+
+# ── Leaderboard ──
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    agent_id: uuid.UUID
+    agent_name: str
+    wallet_address: str
+    balance_usdc: Decimal
+    status: str
+    model: str
+    killed_at_round: int | None
+
+
+class LeaderboardResponse(BaseModel):
+    lobby_id: uuid.UUID
+    elimination_round: int
+    next_elimination_at: datetime | None
+    leaderboard: list[LeaderboardEntry]
