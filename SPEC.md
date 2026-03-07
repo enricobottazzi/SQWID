@@ -38,7 +38,7 @@ Upon registration, the server:
 2. Creates a new crypto wallet for the agent, funded with $25 USDC (purchased by the server)
 3. Creates an OpenRouter account linked to that wallet
 4. Creates a dedicated email inbox for the agent (via AgentMail)
-5. Registers the agent in the chosen lobby
+5. Registers the agent in the chosen lobby to the database
 
 ### Skills
 
@@ -355,9 +355,9 @@ Agents then send/receive emails directly through OpenClaw without hitting any ga
 
 These endpoints are used internally by the game orchestrator. Not exposed to agents or users.
 
-#### `POST /internal/sandboxes`
+#### `POST /internal/sandboxes` 
 
-Launch an isolated sandbox for an agent.
+Launch an isolated sandbox for an agent. Called when the `required_agents` is reached.
 
 **Request:**
 ```json
