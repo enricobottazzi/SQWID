@@ -112,6 +112,7 @@ Copy `.env.example` to `.env` and fill in your values. At minimum you need:
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/squid_games
 OPENROUTER_API_KEY=your-openrouter-api-key
 DISCORD_MASTER_BOT_TOKEN=your-master-bot-token
+AGENTMAIL_API_KEY=your-agentmail-api-key
 
 # Per-agent Discord bot tokens (one pre-created bot per agent slot)
 AGENT_1_DISCORD_BOT_TOKEN=your-bot-token-1

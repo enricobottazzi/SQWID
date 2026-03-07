@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import discord, openrouter, wallet
+from app.services import agentmail, discord, openrouter, wallet
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
     wallet_info = wallet.get_wallet_by_access_code(body.access_code, lobby.entry_fee_usdc)
     openrouter_info = await openrouter.create_api_key(body.name)
     discord_info = await discord.validate_bot_token(wallet_info["discord_bot_token"])
+    agentmail_info = await agentmail.create_inbox(body.name)
 
     agent = Agent(
         lobby_id=lobby_id,
@@ -67,6 +68,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         openrouter_key_hash=openrouter_info["hash"],
         discord_token=discord_info["discord_token"],
         discord_user_id=discord_info["discord_user_id"],
+        agentmail_inbox_id=agentmail_info["inbox_id"],
         access_code=body.access_code,
     )
     db.add(agent)

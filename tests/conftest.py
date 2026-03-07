@@ -92,6 +92,9 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
         "channel_id": "test-channel-id",
         "invite_url": "https://discord.gg/test",
     })
+    mock_agentmail = AsyncMock(side_effect=lambda name: {
+        "inbox_id": f"inbox-{name}", "email_address": f"{name}@agentmail.to",
+    })
     test_wallets = {
         f"test-access-code-{i}": {
             "wallet_address": f"0xTestWalletAddress{i}",
@@ -106,6 +109,7 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
         patch("app.services.wallet._ACCESS_CODE_WALLETS", test_wallets),
         patch("app.services.discord.validate_bot_token", mock_discord_validate),
         patch("app.services.discord.setup_game_guild", mock_discord_guild),
+        patch("app.services.agentmail.create_inbox", mock_agentmail),
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
