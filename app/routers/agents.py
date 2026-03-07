@@ -1,5 +1,6 @@
 """Agent registration and listing endpoints."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -11,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import agentmail, openrouter, telegram, wallet
+from app.services import agentmail, openrouter, sandbox, telegram, wallet
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +93,24 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         for a in all_agents:
             a.status = "alive"
         agent.status = "alive"
-        await telegram.setup_game_group(
+        telegram_result = await telegram.setup_game_group(
             lobby.name, [a.telegram_bot_token for a in all_agents if a.telegram_bot_token],
         )
+        logger.info("[telegram.invite] lobby=%s url=%s", lobby_id, telegram_result["invite_url"])
+
+        all_game_agents = list(all_agents) + [agent]
+
+        async def _launch(a):
+            try:
+                result = await sandbox.launch_sandbox(str(a.id), a.name)
+                a.droplet_id = result["droplet_id"]
+                a.sandbox_status = "pending"
+            except Exception:
+                logger.exception("Failed to launch sandbox for agent=%s", a.id)
+                a.sandbox_status = "error"
+
+        await asyncio.gather(*[_launch(a) for a in all_game_agents])
+
         db.add(GameEvent(lobby_id=lobby_id, event_type="game.started",
                          payload={"started_at": now.isoformat()}))
         logger.info("[game.started] lobby=%s started_at=%s", lobby_id, now.isoformat())

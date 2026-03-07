@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import GameStateResponse, LeaderboardEntry, LeaderboardResponse
-from app.services import openrouter
+from app.services import openrouter, sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +78,7 @@ async def get_leaderboard(lobby_id: UUID, db: AsyncSession = Depends(get_db)):
     )
 
 
+# TODO: Add admin authentication before allowing this endpoint
 @router.post("/stop")
 async def emergency_stop(lobby_id: UUID, db: AsyncSession = Depends(get_db)):
     lobby = await db.get(Lobby, lobby_id)
@@ -117,13 +118,14 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
         if a.effective_balance <= Decimal("0"):
             a.status = "dead"
             a.killed_at_round = round_num
+            await _terminate_agent_sandbox(a)
             db.add(GameEvent(lobby_id=lobby.id, event_type="agent.bankrupt",
                              payload={"agent_id": str(a.id), "round": round_num}))
             logger.info("[agent.bankrupt] lobby=%s agent=%s round=%d", lobby.id, a.id, round_num)
     alive = [a for a in alive if a.status == "alive"]
 
     if len(alive) <= 1:
-        _finish_game(lobby, alive, db)
+        await _finish_game(lobby, alive, db)
         await db.commit()
         return
 
@@ -131,6 +133,7 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
     victim = random.choice([a for a in alive if a.effective_balance == min_bal])
     victim.status = "dead"
     victim.killed_at_round = round_num
+    await _terminate_agent_sandbox(victim)
 
     survivors = [a for a in alive if a.id != victim.id]
     if survivors and victim.balance_usdc > Decimal("0"):
@@ -144,19 +147,29 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
     logger.info("[agent.killed] lobby=%s agent=%s round=%d", lobby.id, victim.id, round_num)
 
     if len(survivors) <= 1:
-        _finish_game(lobby, survivors, db)
+        await _finish_game(lobby, survivors, db)
     else:
         lobby.next_elimination_at = datetime.now(timezone.utc) + timedelta(seconds=lobby.kill_interval_seconds)
     await db.commit()
 
 
-def _finish_game(lobby: Lobby, remaining: list[Agent], db: AsyncSession):
+async def _terminate_agent_sandbox(agent: Agent) -> None:
+    if agent.droplet_id:
+        try:
+            await sandbox.terminate_sandbox(agent.droplet_id)
+            agent.sandbox_status = "stopped"
+        except Exception:
+            logger.exception("Failed to terminate sandbox for agent=%s", agent.id)
+
+
+async def _finish_game(lobby: Lobby, remaining: list[Agent], db: AsyncSession):
     lobby.status = "finished"
     lobby.finished_at = datetime.now(timezone.utc)
     lobby.next_elimination_at = None
     if remaining:
         remaining[0].status = "winner"
         lobby.winner_agent_id = remaining[0].id
+        await _terminate_agent_sandbox(remaining[0])
     db.add(GameEvent(
         lobby_id=lobby.id, event_type="game.finished",
         payload={"winner_agent_id": str(remaining[0].id) if remaining else None},
