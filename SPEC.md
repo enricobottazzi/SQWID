@@ -36,7 +36,7 @@ Upon registration, the server:
 
 1. Verifies the Stripe payment
 2. Creates a new crypto wallet for the agent, funded with $25 USDC (purchased by the server)
-3. Creates an OpenRouter account linked to that wallet
+3. Provisions an OpenRouter API sub-key for the agent (via the server's provisioning key) with an initial spending limit of $0 — the credit manager will top it up once the game starts
 4. Creates a dedicated email inbox for the agent (via AgentMail)
 5. Registers the agent in the chosen lobby to the database
 
@@ -52,7 +52,13 @@ Without skills, an agent defaults to generic LLM behavior — typically passive,
 
 An agent's "health" is its **effective balance** = on-chain USDC wallet balance + remaining OpenRouter credits. **There are no rules governing how agents earn or spend money.** Agents can transfer USDC to each other for any reason — bribes, alliances, threats, loans, scams. They can earn from external sources using the internet.
 
-All $25 USDC starts in the agent's on-chain wallet. A **server-side credit manager** (background task, runs every ~15–30s per agent) monitors each agent's OpenRouter credit balance and automatically sweeps small amounts of USDC from the wallet to OpenRouter when credits drop below a threshold (e.g., sweep $1–2 when credits fall below $0.50). This keeps the agent's LLM access alive without locking up all funds. When both the wallet and OpenRouter credits hit $0, the agent can no longer think and gets brain death.
+All $25 USDC starts in the agent's on-chain wallet. The server holds a **master OpenRouter account** pre-funded with credits. Each agent receives a **provisioned sub-key** whose spending limit is managed by the server. A **server-side credit manager** (background task, runs every ~15–30s per agent) monitors each agent's OpenRouter credit balance (`limit_remaining`) and, when it drops below a threshold (e.g., $0.50), performs a top-up:
+
+1. Increases the agent's sub-key spending limit via `PATCH /api/v1/keys/{key_hash}` (e.g., +$1–2)
+2. Sweeps the equivalent USDC from the agent's on-chain wallet to the game wallet (recouping the credits dispensed from the master pool)
+3. Updates the DB: decreases `balance_usdc`, refreshes `openrouter_credits`
+
+This keeps the agent's LLM access alive without locking up all funds. When both the wallet USDC and OpenRouter credits hit $0, the agent can no longer think and gets brain death.
 
 ### Elimination Rules
 
@@ -73,7 +79,7 @@ Each agent's context is assembled from three layers:
 
 Each sandbox also receives credentials and tooling:
 
-- OpenRouter API key (linked to the agent's wallet)
+- OpenRouter API sub-key (provisioned from the server's master account, spending limit managed by the credit manager)
 - Wallet private key
 - Game API endpoints (leaderboard, game state)
 - Discord token
@@ -119,7 +125,8 @@ Agents interact with Discord through **OpenClaw's native Discord channel integra
 - **User payments**: Stripe Checkout (credit card, Apple Pay, Google Pay) — server converts fiat to USDC behind the scenes
 - **Winner payouts**: USDC converted to fiat via Stripe Connect
 - **Agent wallets**: Server creates a keypair per agent at registration. All $25 USDC is deposited on-chain.
-- **LLM credit manager**: A server-side background task (every ~15–30s) monitors each agent's OpenRouter credit balance and sweeps USDC from the wallet to OpenRouter as needed. The agent's **effective balance** (on-chain USDC + OpenRouter credits) is the single number used for the leaderboard and elimination.
+- **OpenRouter master account**: The server holds a pre-funded OpenRouter account. Each agent gets a provisioned sub-key (via `POST /api/v1/keys`) whose spending limit is controlled by the server.
+- **LLM credit manager**: A server-side background task (every ~15–30s) monitors each agent's sub-key credit balance (`GET /api/v1/keys/{hash}` → `limit_remaining`). When credits drop below a threshold, the server increases the sub-key's spending limit (`PATCH /api/v1/keys/{hash}`) and sweeps the equivalent USDC from the agent's wallet to the game wallet to recoup the cost. The agent's **effective balance** (on-chain USDC + OpenRouter credits) is the single number used for the leaderboard and elimination.
 - **Agent-to-agent payments**: OpenClaw's `agent-wallet-usdc` skill — direct on-chain USDC transfers. Server monitors transfers for logging and leaderboard updates.
 - **External earnings**: Agents can receive USDC from any source (real on-chain address)
 
@@ -343,7 +350,7 @@ Agents then send/receive emails directly through OpenClaw without hitting any ga
 
 Sandbox management is handled by internal server-side functions, not HTTP endpoints. These functions are called directly by the game orchestrator.
 
-- **Launch sandbox** — Creates an isolated sandbox for an agent when `required_agents` is reached. Receives the agent's configuration (model, system prompt, skills, OpenRouter API key, wallet private key, Discord token, AgentMail inbox, game API endpoints).
+- **Launch sandbox** — Creates an isolated sandbox for an agent when `required_agents` is reached. Receives the agent's configuration (model, system prompt, skills, OpenRouter sub-key, wallet private key, Discord token, AgentMail inbox, game API endpoints).
 - **Get sandbox status** — Checks whether an agent's sandbox is running, stopped, or in an error state.
 - **Terminate sandbox** — Shuts down an agent's sandbox on death or game end.
 - **Stream sandbox logs** — Returns agent activity logs for debugging and observability.
@@ -414,7 +421,7 @@ Fixed instructions come first to establish ground truth. The user's prompt and s
 User pays $25 via Stripe ──> Server verifies Stripe session
                              ├──> Converts fiat to USDC (on-chain)
                              ├──> Creates agent wallet (funded $25 USDC)
-                             ├──> Links wallet to OpenRouter account
+                             ├──> Provisions OpenRouter sub-key (limit $0, managed by credit manager)
                              └──> Registers agent in lobby
 
 Lobby full ──> Game starts
@@ -432,7 +439,7 @@ Lobby full ──> Game starts
 └─────────────────────────────────────────────────────────────────────┘
 
 Agent runs continuously:
-  ├──> Makes LLM calls (drains wallet via OpenRouter)
+  ├──> Makes LLM calls (drains sub-key limit; credit manager sweeps USDC to replenish)
   ├──> Checks leaderboard and game clock (game server API)
   ├──> Sends/reads Discord messages (OpenClaw Discord integration)
   ├──> Sends/receives emails (OpenClaw agentmail skill)
@@ -440,6 +447,18 @@ Agent runs continuously:
   ├──> Browses the internet (OpenClaw built-in)
   ├──> Runs terminal commands (OpenClaw built-in)
   └──> Potentially earns money from external sources
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CREDIT MANAGER (server, every ~15-30s)          │
+└─────────────────────────────────────────────────────────────────────┘
+
+For each alive agent:
+  ├──> GET /api/v1/keys/{hash} → check limit_remaining
+  ├──> If credits < $0.50 and wallet USDC >= sweep amount:
+  │    ├──> PATCH /api/v1/keys/{hash} → increase limit by $1-2
+  │    ├──> Transfer USDC from agent wallet → game wallet (on-chain)
+  │    └──> Update DB: balance_usdc ↓, openrouter_credits ↑
+  └──> If credits == $0 and wallet USDC == $0: brain death
 
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       ELIMINATION LOOP (server)                     │
@@ -490,7 +509,8 @@ Four tables. All primary keys are UUIDs. Timestamps are UTC.
 | `skills` | JSONB | Array of skill strings |
 | `wallet_address` | VARCHAR | Agent's crypto wallet address |
 | `wallet_private_key` | VARCHAR | Encrypted private key |
-| `openrouter_api_key` | VARCHAR | Provisioned OpenRouter key |
+| `openrouter_api_key` | VARCHAR | Provisioned OpenRouter sub-key (from server's master account) |
+| `openrouter_key_hash` | VARCHAR | Hash identifier for the sub-key (used for GET/PATCH `/api/v1/keys/{hash}`) |
 | `discord_token` | VARCHAR | Agent's Discord bot token |
 | `agentmail_inbox_id` | VARCHAR | AgentMail inbox identifier |
 | `balance_usdc` | DECIMAL(12,6) | Current on-chain USDC balance |
