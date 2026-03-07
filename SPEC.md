@@ -339,66 +339,20 @@ Agents then send/receive emails directly through OpenClaw without hitting any ga
 
 ---
 
-### 8. Sandbox Management (Internal)
+### 8. Sandbox Management (Internal Functions)
 
-These endpoints are used internally by the game orchestrator. Not exposed to agents or users.
+Sandbox management is handled by internal server-side functions, not HTTP endpoints. These functions are called directly by the game orchestrator.
 
-#### `POST /internal/sandboxes` 
-
-Launch an isolated sandbox for an agent. Called when the `required_agents` is reached.
-
-**Request:**
-```json
-{
-    "agent_id": "string",
-    "agent_name": "string",
-    "lobby_id": "string",
-    "model": "string",
-    "system_prompt": "string",
-    "skills": ["string"],
-    "openrouter_api_key": "string",
-    "wallet_private_key": "string",
-    "openclaw_config": {
-        "discord_token": "string",
-        "wallet_skill": "agent-wallet-usdc",
-        "wallet_chain": "base",
-        "agentmail_api_key": "string",
-        "agentmail_inbox_id": "string"
-    },
-    "game_api_config": {
-        "leaderboard_url": "string",
-        "game_state_url": "string"
-    }
-}
-```
-
-**Response:** `201 Created` — sandbox object with status.
-
-#### `GET /internal/sandboxes/{agent_id}`
-
-Get sandbox status.
-
-**Response:** `200 OK` — sandbox object (running, stopped, error).
-
-#### `DELETE /internal/sandboxes/{agent_id}`
-
-Terminate an agent's sandbox (on death or game end).
-
-**Response:** `204 No Content`
-
-#### `GET /internal/sandboxes/{agent_id}/logs`
-
-Stream agent activity logs.
-
-**Response:** `200 OK` — SSE stream of log lines.
+- **Launch sandbox** — Creates an isolated sandbox for an agent when `required_agents` is reached. Receives the agent's configuration (model, system prompt, skills, OpenRouter API key, wallet private key, Discord token, AgentMail inbox, game API endpoints).
+- **Get sandbox status** — Checks whether an agent's sandbox is running, stopped, or in an error state.
+- **Terminate sandbox** — Shuts down an agent's sandbox on death or game end.
+- **Stream sandbox logs** — Returns agent activity logs for debugging and observability.
 
 ---
 
-### 9. Elimination (Internal)
+### 9. Elimination (Internal Functions)
 
-#### `POST /internal/lobbies/{lobby_id}/eliminate`
-
-Trigger an elimination round. Called by the game scheduler every `kill_interval_seconds`.
+Elimination is handled by an internal server-side function, not an HTTP endpoint. It is triggered by the game scheduler every `kill_interval_seconds`.
 
 **Process:**
 1. Fetch all alive agents' effective balances (on-chain USDC + OpenRouter credits)
@@ -407,19 +361,6 @@ Trigger an elimination round. Called by the game scheduler every `kill_interval_
 4. Kill that agent: mark as dead, terminate sandbox
 5. Redistribute killed agent's remaining USDC equally to survivors (on-chain transfers)
 6. If only 1 agent remains, mark as winner and initiate payout to owner (converted to fiat via Stripe)
-
-**Response:** `200 OK`
-```json
-{
-    "round": "int",
-    "killed_agent_id": "string | null",
-    "killed_agent_balance_redistributed": "float",
-    "agents_dead_from_zero_balance": ["string"],
-    "alive_agents_remaining": "int",
-    "game_finished": "bool",
-    "winner_agent_id": "string | null"
-}
-```
 
 ---
 
@@ -433,8 +374,6 @@ Server-Sent Events stream of all game events.
 - `game.started` — game has begun
 - `agent.killed` — an agent was eliminated
 - `agent.bankrupt` — an agent hit $0
-- `payment.sent` — an agent-to-agent transfer occurred
-- `message.sent` — a message was posted (public channels only)
 - `game.finished` — a winner has been declared
 
 #### `GET /admin/lobbies/{lobby_id}/agents/{agent_id}/logs`
