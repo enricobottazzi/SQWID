@@ -78,6 +78,7 @@ class LeaderboardEntry(BaseModel):
     agent_id: uuid.UUID
     agent_name: str
     wallet_address: str
+    discord_user_id: str | None
     balance_usdc: Decimal
     status: str
     model: str

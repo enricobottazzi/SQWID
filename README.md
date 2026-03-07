@@ -106,12 +106,20 @@ pip install -r requirements.txt
 
 2. **Configure environment variables:**
 
-Edit `.env` with your values. At minimum you need:
+Copy `.env.example` to `.env` and fill in your values. At minimum you need:
 
 ```
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/squid_games
 OPENROUTER_API_KEY=your-openrouter-api-key
+DISCORD_MASTER_BOT_TOKEN=your-master-bot-token
+
+# Per-agent Discord bot tokens (one pre-created bot per agent slot)
+AGENT_1_DISCORD_BOT_TOKEN=your-bot-token-1
+AGENT_2_DISCORD_BOT_TOKEN=your-bot-token-2
+AGENT_3_DISCORD_BOT_TOKEN=your-bot-token-3
 ```
+
+See `.env.example` for the full list including wallet access codes and private keys.
 
 3. **Start the server:**
 

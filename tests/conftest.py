@@ -84,10 +84,19 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides[get_db] = _override_get_db
 
     mock_key = AsyncMock(return_value={"key": "sk-or-test-key", "hash": "test-hash"})
+    mock_discord_validate = AsyncMock(side_effect=lambda token: {
+        "discord_token": token, "discord_user_id": f"discord-uid-{token[-1]}",
+    })
+    mock_discord_guild = AsyncMock(return_value={
+        "guild_id": "test-guild-id",
+        "channel_id": "test-channel-id",
+        "invite_url": "https://discord.gg/test",
+    })
     test_wallets = {
         f"test-access-code-{i}": {
             "wallet_address": f"0xTestWalletAddress{i}",
             "wallet_private_key": f"0xTestPrivateKey{i}",
+            "discord_bot_token": f"test-discord-token-{i}",
         }
         for i in range(1, 4)
     }
@@ -95,6 +104,8 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
     with (
         patch("app.services.openrouter.create_api_key", mock_key),
         patch("app.services.wallet._ACCESS_CODE_WALLETS", test_wallets),
+        patch("app.services.discord.validate_bot_token", mock_discord_validate),
+        patch("app.services.discord.setup_game_guild", mock_discord_guild),
     ):
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac

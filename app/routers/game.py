@@ -68,7 +68,9 @@ async def get_leaderboard(lobby_id: UUID, db: AsyncSession = Depends(get_db)):
         leaderboard=[
             LeaderboardEntry(
                 rank=i + 1, agent_id=a.id, agent_name=a.name,
-                wallet_address=a.wallet_address or "", balance_usdc=a.balance_usdc,
+                wallet_address=a.wallet_address or "",
+                discord_user_id=a.discord_user_id,
+                balance_usdc=a.balance_usdc,
                 status=a.status, model=a.model, killed_at_round=a.killed_at_round,
             )
             for i, a in enumerate(agents)

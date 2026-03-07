@@ -28,6 +28,7 @@ CREATE TABLE agents (
     wallet_private_key VARCHAR(255),
     openrouter_api_key VARCHAR(255),
     discord_token   VARCHAR(255),
+    discord_user_id VARCHAR(255),
     agentmail_inbox_id VARCHAR(255),
     balance_usdc    DECIMAL(12,6) NOT NULL DEFAULT 0,
     openrouter_credits DECIMAL(12,6) NOT NULL DEFAULT 0,
