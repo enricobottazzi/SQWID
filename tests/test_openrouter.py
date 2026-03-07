@@ -49,3 +49,20 @@ class TestGetCreditBalance:
         with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=resp):
             with pytest.raises(httpx.HTTPStatusError):
                 await openrouter.get_credit_balance("bad_hash")
+
+
+class TestIncreaseSpendingLimit:
+    async def test_success_sends_patch_with_amount(self):
+        resp = _mock_response({"data": {"limit": 5.0}})
+        with patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=resp) as mock_patch:
+            await openrouter.increase_spending_limit("h_abc123", Decimal("1.50"))
+        mock_patch.assert_awaited_once()
+        call_kwargs = mock_patch.call_args
+        assert "h_abc123" in call_kwargs.args[0]
+        assert call_kwargs.kwargs["json"] == {"limit_increase": 1.5}
+
+    async def test_raises_on_http_error(self):
+        resp = _mock_response({"error": {"message": "server error"}}, 500)
+        with patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=resp):
+            with pytest.raises(httpx.HTTPStatusError):
+                await openrouter.increase_spending_limit("bad_hash", Decimal("1.00"))

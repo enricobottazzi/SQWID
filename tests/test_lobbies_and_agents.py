@@ -1,6 +1,7 @@
 """Tests for lobby and agent endpoints, including DB state verification."""
 
 import uuid
+from decimal import Decimal
 
 import pytest
 import pytest_asyncio
@@ -239,3 +240,73 @@ class TestGetAgent:
         )
         resp = await client.get(f"/lobbies/{lobby2['lobby_id']}/agents/{agent_data['agent_id']}")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Access code validation
+# ---------------------------------------------------------------------------
+
+
+class TestAccessCodeValidation:
+    async def test_invalid_access_code_returns_403(self, client: AsyncClient):
+        lobby = await _create_lobby(client, name="AccessCodeLobby", required_agents=5)
+        _, status = await _register_agent(
+            client, lobby["lobby_id"], name="BadCode", access_code="totally-bogus-code"
+        )
+        assert status == 403
+
+    async def test_register_to_in_progress_lobby_returns_409(self, client: AsyncClient):
+        lobby = await _create_lobby(client, name="InProgressReg", required_agents=2)
+        lid = lobby["lobby_id"]
+        await _register_agent(client, lid, name="A1", access_code="test-access-code-1")
+        await _register_agent(client, lid, name="A2", access_code="test-access-code-2")
+
+        resp = await client.get(f"/lobbies/{lid}")
+        assert resp.json()["status"] == "in_progress"
+
+        _, status = await _register_agent(
+            client, lid, name="Late", access_code="test-access-code-3"
+        )
+        assert status == 409
+
+
+# ---------------------------------------------------------------------------
+# Agent initial state
+# ---------------------------------------------------------------------------
+
+
+class TestAgentInitialState:
+    async def test_agent_initial_balance_matches_entry_fee(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ):
+        lobby = await _create_lobby(client, name="BalanceLobby", required_agents=5, entry_fee_usdc=10.0)
+        agent_data, _ = await _register_agent(
+            client, lobby["lobby_id"], name="BalCheck", access_code="test-access-code-1"
+        )
+        agent = await db_session.get(Agent, uuid.UUID(agent_data["agent_id"]))
+        assert agent is not None
+        assert agent.balance_usdc == Decimal("10")
+
+    async def test_agent_openrouter_credits_start_at_zero(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ):
+        lobby = await _create_lobby(client, name="CreditZeroLobby", required_agents=5)
+        agent_data, _ = await _register_agent(
+            client, lobby["lobby_id"], name="CreditCheck", access_code="test-access-code-1"
+        )
+        agent = await db_session.get(Agent, uuid.UUID(agent_data["agent_id"]))
+        assert agent is not None
+        assert agent.openrouter_credits == Decimal("0")
+
+    async def test_next_elimination_at_set_on_auto_start(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ):
+        lobby = await _create_lobby(client, name="ElimTimerLobby", required_agents=2)
+        lid = lobby["lobby_id"]
+        await _register_agent(client, lid, name="T1", access_code="test-access-code-1")
+        await _register_agent(client, lid, name="T2", access_code="test-access-code-2")
+
+        db_lobby = await db_session.get(Lobby, uuid.UUID(lid))
+        assert db_lobby is not None
+        assert db_lobby.started_at is not None
+        assert db_lobby.next_elimination_at is not None
