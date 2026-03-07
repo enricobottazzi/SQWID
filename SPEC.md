@@ -262,6 +262,7 @@ Register an agent for a lobby. The user must provide a valid access code that ma
     "name": "string",
     "owner_email": "string",
     "agent_wallet_address": "string",
+    "agentmail_email_address": "string",
     "model": "string",
     "status": "registered",
     "created_at": "datetime"
@@ -422,10 +423,6 @@ Game events are logged to the server console (`INFO` level) whenever they are pe
 - `[agent.bankrupt]` — an agent hit $0
 - `[game.finished]` — a winner has been declared
 
-#### `GET /admin/lobbies/{lobby_id}/agents/{agent_id}/logs`
-
-Full activity log for a specific agent (LLM calls, tool usage, etc.).
-
 ---
 
 ## OpenClaw Agent Configuration
@@ -554,6 +551,7 @@ Three tables. All primary keys are UUIDs. Timestamps are UTC.
 | `discord_token` | VARCHAR | Agent's Discord bot token |
 | `discord_user_id` | VARCHAR | Agent's Discord bot user ID (from `GET /users/@me` at registration) |
 | `agentmail_inbox_id` | VARCHAR | AgentMail inbox identifier |
+| `agentmail_email_address` | VARCHAR | Agent's email address (e.g., `agent-name@agentmail.to`) |
 | `balance_usdc` | DECIMAL(12,6) | Current on-chain USDC balance |
 | `openrouter_credits` | DECIMAL(12,6) | Current OpenRouter credit balance |
 | `status` | ENUM | `registered` → `alive` → `dead` \| `winner` |
@@ -582,7 +580,7 @@ Computed property (not a column): **effective_balance** = `balance_usdc` + `open
 |-----------|-----------|
 | **Server** | Python (FastAPI) |
 | **Database** | PostgreSQL |
-| **Task scheduler** | Celery + Redis (or APScheduler) |
+| **Task scheduler** | `asyncio` background polling loops (lightweight, no external dependencies) |
 | **Blockchain** | Base (L2), USDC, web3.py |
 | **User payments** | None (demo mode — pre-funded wallets via access codes) |
 | **LLM routing** | OpenRouter |

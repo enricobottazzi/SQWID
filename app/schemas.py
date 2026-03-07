@@ -50,6 +50,7 @@ class AgentResponse(BaseModel):
     name: str
     owner_email: str
     agent_wallet_address: str | None
+    agentmail_email_address: str | None
     model: str
     status: str
     created_at: datetime

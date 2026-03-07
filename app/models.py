@@ -65,6 +65,7 @@ class Agent(Base):
     discord_token: Mapped[str | None] = mapped_column(String(255))
     discord_user_id: Mapped[str | None] = mapped_column(String(255))
     agentmail_inbox_id: Mapped[str | None] = mapped_column(String(255))
+    agentmail_email_address: Mapped[str | None] = mapped_column(String(255))
     balance_usdc: Mapped[Decimal] = mapped_column(DECIMAL(12, 6), nullable=False, default=Decimal("0"))
     openrouter_credits: Mapped[Decimal] = mapped_column(DECIMAL(12, 6), nullable=False, default=Decimal("0"))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="registered")

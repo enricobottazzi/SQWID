@@ -25,6 +25,7 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
         name=agent.name,
         owner_email=agent.owner_email,
         agent_wallet_address=agent.wallet_address,
+        agentmail_email_address=agent.agentmail_email_address,
         model=agent.model,
         status=agent.status,
         created_at=agent.created_at,
@@ -69,6 +70,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         discord_token=discord_info["discord_token"],
         discord_user_id=discord_info["discord_user_id"],
         agentmail_inbox_id=agentmail_info["inbox_id"],
+        agentmail_email_address=agentmail_info["email_address"],
         access_code=body.access_code,
     )
     db.add(agent)
