@@ -34,7 +34,12 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
 
 @router.post("/", status_code=201, response_model=AgentResponse)
 async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = Depends(get_db)):
-    lobby = await db.get(Lobby, lobby_id)
+    # Lock the lobby row — concurrent registrations for the same lobby
+    # will block here until the current transaction commits or rolls back.
+    result = await db.execute(
+        select(Lobby).where(Lobby.id == lobby_id).with_for_update()
+    )
+    lobby = result.scalar_one_or_none()
     if lobby is None:
         raise HTTPException(status_code=404, detail="Lobby not found")
     if lobby.status != "waiting":
@@ -74,8 +79,6 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         access_code=body.access_code,
     )
     db.add(agent)
-    await db.commit()
-    await db.refresh(agent)
 
     new_count = agent_count + 1
     if new_count >= lobby.required_agents:
@@ -88,14 +91,16 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         )).scalars().all()
         for a in all_agents:
             a.status = "alive"
+        agent.status = "alive"
         await telegram.setup_game_group(
             lobby.name, [a.telegram_bot_token for a in all_agents if a.telegram_bot_token],
         )
         db.add(GameEvent(lobby_id=lobby_id, event_type="game.started",
                          payload={"started_at": now.isoformat()}))
         logger.info("[game.started] lobby=%s started_at=%s", lobby_id, now.isoformat())
-        await db.commit()
-        await db.refresh(agent)
+
+    await db.commit()
+    await db.refresh(agent)
 
     return _agent_to_response(agent)
 
