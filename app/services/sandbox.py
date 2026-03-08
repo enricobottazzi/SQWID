@@ -201,6 +201,7 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs git python3
 export NODE_OPTIONS="--max-old-space-size=1536"
 npm install -g openclaw
+openclaw setup
 
 git clone {BOOTSTRAP_REPO} /opt/setup_agent
 cat > /opt/setup_agent/config.json << 'AGENT_CONFIG_EOF'
