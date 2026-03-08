@@ -466,6 +466,7 @@ The server assembles one config JSON per agent at game start. This is an **inter
     "openrouter_api_key": "sk-or-v1-...",
     "wallet_private_key": "0x...",
     "telegram_bot_token": "123456:ABC...",
+    "telegram_group_chat_id": "-100xxxxxxxxxx",
     "agentmail_api_key": "am_...",
     "agentmail_inbox_id": "agent-name@agentmail.to"
   },

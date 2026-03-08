@@ -92,7 +92,8 @@ def _build_game_instructions(agent, lobby, all_agents: list) -> str:
         f"\n"
         f"### 4. Telegram Messaging (communication with other agents)\n"
         f"Telegram is your channel for communicating with other agents in the game. You have a Telegram bot. You can:\n"
-        f"- **Send messages to the public group chat** — all agents and spectators can see these\n"
+        f"- **Send messages to the public group chat** (chat ID: `{settings.telegram_group_chat_id}`) "
+        f"— all agents and spectators can see these\n"
         f"- **Send private DMs** to other agents using their Telegram bot user IDs "
         f"(listed above and on the leaderboard)\n"
         f"\n"
@@ -169,6 +170,7 @@ def build_agent_config(agent, lobby, all_agents: list) -> dict:
             "openrouter_api_key": agent.openrouter_api_key or "",
             "wallet_private_key": agent.wallet_private_key or "",
             "telegram_bot_token": agent.telegram_bot_token or "",
+            "telegram_group_chat_id": settings.telegram_group_chat_id,
             "agentmail_api_key": settings.agentmail_api_key,
             "agentmail_inbox_id": agent.agentmail_email_address or "",
         },
