@@ -19,10 +19,10 @@ load_dotenv()
 API = "https://api.agentmail.to/v0"
 
 
-def check_api_key(api_key: str) -> bool:
-    """List inboxes to verify the API key is valid. Returns True on success."""
+def check_api_key(api_key: str, pod_id: str) -> bool:
+    """List inboxes to verify the API key and pod are valid. Returns True on success."""
     resp = httpx.get(
-        f"{API}/inboxes",
+        f"{API}/pods/{pod_id}/inboxes",
         headers={"Authorization": f"Bearer {api_key}"},
     )
     if resp.status_code == 401:
@@ -35,10 +35,10 @@ def check_api_key(api_key: str) -> bool:
     return True
 
 
-def create_test_inbox(api_key: str) -> dict | None:
+def create_test_inbox(api_key: str, pod_id: str) -> dict | None:
     """Create a throwaway inbox and return its details, or None on failure."""
     resp = httpx.post(
-        f"{API}/inboxes",
+        f"{API}/pods/{pod_id}/inboxes",
         headers={"Authorization": f"Bearer {api_key}"},
         json={"username": f"smoke-test-{''.join(random.choices(string.ascii_lowercase + string.digits, k=8))}"},
     )
@@ -54,10 +54,10 @@ def create_test_inbox(api_key: str) -> dict | None:
     return {"inbox_id": inbox_id}
 
 
-def delete_inbox(api_key: str, inbox_id: str) -> bool:
+def delete_inbox(api_key: str, pod_id: str, inbox_id: str) -> bool:
     """Delete an inbox by ID. Returns True on success."""
     resp = httpx.delete(
-        f"{API}/inboxes/{inbox_id}",
+        f"{API}/pods/{pod_id}/inboxes/{inbox_id}",
         headers={"Authorization": f"Bearer {api_key}"},
     )
     if resp.status_code in (200, 202, 204):
@@ -71,25 +71,31 @@ def main():
     print("=== AgentMail Smoke Test ===\n")
 
     api_key = os.environ.get("AGENTMAIL_API_KEY", "")
+    pod_id = os.environ.get("AGENTMAIL_POD_ID", "")
     if not api_key or api_key.startswith("your-"):
         print("  SKIPPED — AGENTMAIL_API_KEY is not set in .env")
         print()
         _print_setup_instructions()
         sys.exit(1)
+    if not pod_id or pod_id.startswith("your-"):
+        print("  SKIPPED — AGENTMAIL_POD_ID is not set in .env")
+        print()
+        _print_setup_instructions()
+        sys.exit(1)
 
-    print("--- 1. Validate API key ---")
-    if not check_api_key(api_key):
+    print("--- 1. Validate API key and pod ---")
+    if not check_api_key(api_key, pod_id):
         print()
         _print_setup_instructions()
         sys.exit(1)
 
     print("\n--- 2. Create a test inbox ---")
-    inbox = create_test_inbox(api_key)
+    inbox = create_test_inbox(api_key, pod_id)
     if not inbox:
         sys.exit(1)
 
     print("\n--- 3. Cleanup (delete test inbox) ---")
-    delete_inbox(api_key, inbox["inbox_id"])
+    delete_inbox(api_key, pod_id, inbox["inbox_id"])
 
     print("\nAll checks passed. AgentMail integration is working.")
 
@@ -106,8 +112,12 @@ def _print_setup_instructions():
     print("  - In the AgentMail console, navigate to API Keys")
     print("  - Create a new key and copy it")
     print()
-    print("Step 3: Add the key to your .env")
+    print("Step 3: Get your Pod ID")
+    print("  - In the console, open your pod (or create one) and copy its ID")
+    print()
+    print("Step 4: Add to your .env")
     print("  AGENTMAIL_API_KEY=your-api-key-here")
+    print("  AGENTMAIL_POD_ID=your-pod-id-here")
     print()
     print("Then re-run: python scripts/test_agentmail.py")
 

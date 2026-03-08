@@ -14,7 +14,7 @@ async def create_inbox(agent_name: str) -> dict:
     """
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{API}/inboxes",
+            f"{API}/pods/{settings.agentmail_pod_id}/inboxes",
             headers={"Authorization": f"Bearer {settings.agentmail_api_key}"},
             json={"username": agent_name},
         )
