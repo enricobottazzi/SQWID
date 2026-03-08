@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models import Lobby
 from app.schemas import LobbyCreate, LobbyResponse
@@ -33,6 +34,7 @@ async def create_lobby(body: LobbyCreate, db: AsyncSession = Depends(get_db)):
         required_agents=body.required_agents,
         kill_interval_seconds=body.kill_interval_seconds,
         entry_fee_usdc=body.entry_fee_usdc,
+        game_wallet_address=settings.game_wallet_address,
     )
     db.add(lobby)
     await db.commit()

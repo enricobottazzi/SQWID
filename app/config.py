@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     do_api_token: str = ""
     do_ssh_key_id: str = ""
     game_server_url: str = ""
+    base_rpc_url: str = "https://mainnet.base.org"
+    game_wallet_address: str = ""
+    game_wallet_private_key: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

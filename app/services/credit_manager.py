@@ -9,13 +9,19 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.models import Agent, Lobby
-from app.services import openrouter
+from app.services import openrouter, usdc
 
 logger = logging.getLogger(__name__)
 
 
 async def _process_agent(agent: Agent, db: AsyncSession) -> None:
     """Check one agent's credits and top up from wallet if needed."""
+    if agent.wallet_address:
+        try:
+            agent.balance_usdc = await usdc.get_usdc_balance(agent.wallet_address)
+        except Exception:
+            logger.exception("Failed to read on-chain balance for agent %s", agent.id)
+
     if not agent.openrouter_key_hash:
         return
 
@@ -39,6 +45,12 @@ async def _process_agent(agent: Agent, db: AsyncSession) -> None:
         await openrouter.increase_spending_limit(agent.openrouter_key_hash, top_up)
     except Exception:
         logger.exception("Failed to increase spending limit for agent %s", agent.id)
+        return
+
+    try:
+        await usdc.transfer_usdc(agent.wallet_private_key, settings.game_wallet_address, top_up)
+    except Exception:
+        logger.exception("Failed to sweep USDC for agent %s", agent.id)
         return
 
     agent.balance_usdc -= top_up

@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import GameStateResponse, LeaderboardEntry, LeaderboardResponse
-from app.services import openrouter, sandbox
+from app.config import settings
+from app.services import openrouter, sandbox, usdc
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,11 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
     )).scalars().all())
 
     for a in alive:
+        if a.wallet_address:
+            try:
+                a.balance_usdc = await usdc.get_usdc_balance(a.wallet_address)
+            except Exception:
+                logger.exception("Failed to read on-chain balance for agent %s", a.id)
         if a.openrouter_key_hash:
             try:
                 a.openrouter_credits = await openrouter.get_credit_balance(a.openrouter_key_hash)
@@ -139,6 +145,10 @@ async def run_elimination_round(lobby_id: UUID, db: AsyncSession):
     if survivors and victim.balance_usdc > Decimal("0"):
         share = victim.balance_usdc / len(survivors)
         for s in survivors:
+            try:
+                await usdc.transfer_usdc(settings.game_wallet_private_key, s.wallet_address, share)
+            except Exception:
+                logger.exception("Failed redistribution transfer to agent %s", s.id)
             s.balance_usdc += share
         victim.balance_usdc = Decimal("0")
 
