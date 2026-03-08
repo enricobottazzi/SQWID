@@ -210,7 +210,7 @@ cat > /opt/setup_agent/config.json << 'AGENT_CONFIG_EOF'
 {config_json}
 AGENT_CONFIG_EOF
 
-python3 /opt/setup_agent/setup_agent.py
+python3 /opt/setup_agent/setup_agent.py /opt/setup_agent/config.json
 """
 
 
