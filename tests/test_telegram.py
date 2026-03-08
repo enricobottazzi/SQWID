@@ -16,10 +16,10 @@ def _mock_response(json_data: dict, status_code: int = 200) -> httpx.Response:
 
 class TestValidateBotToken:
     async def test_returns_token_and_user_id(self):
-        resp = _mock_response({"ok": True, "result": {"id": 123456789, "is_bot": True, "first_name": "TestBot"}})
+        resp = _mock_response({"ok": True, "result": {"id": 123456789, "is_bot": True, "first_name": "TestBot", "username": "test_bot"}})
         with patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=resp):
             result = await telegram.validate_bot_token("fake-token")
-        assert result == {"telegram_bot_token": "fake-token", "telegram_bot_user_id": "123456789"}
+        assert result == {"telegram_bot_token": "fake-token", "telegram_bot_user_id": "123456789", "telegram_bot_username": "test_bot"}
 
     async def test_raises_on_invalid_token(self):
         resp = _mock_response({"ok": False, "description": "Unauthorized"}, 401)

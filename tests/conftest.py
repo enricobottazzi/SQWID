@@ -86,6 +86,7 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
     mock_key = AsyncMock(return_value={"key": "sk-or-test-key", "hash": "test-hash"})
     mock_telegram_validate = AsyncMock(side_effect=lambda token: {
         "telegram_bot_token": token, "telegram_bot_user_id": f"tg-uid-{token[-1]}",
+        "telegram_bot_username": f"test_bot_{token[-1]}",
     })
     mock_telegram_group = AsyncMock(return_value={
         "group_chat_id": "test-group-id",

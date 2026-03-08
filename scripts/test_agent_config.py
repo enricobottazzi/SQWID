@@ -30,6 +30,7 @@ fake_agent_1 = SimpleNamespace(
     wallet_address=env.get("AGENT_1_WALLET_ADDRESS", "0xABC1"),
     telegram_bot_token=env.get("AGENT_1_TELEGRAM_BOT_TOKEN", ""),
     telegram_bot_user_id="111111111",
+    telegram_bot_username="testbot_alpha_bot",
     agentmail_email_address="testbot-alpha@agentmail.to",
 )
 
@@ -39,6 +40,7 @@ fake_agent_2 = SimpleNamespace(
     model="openai/gpt-4o",
     wallet_address=env.get("AGENT_2_WALLET_ADDRESS", "0xABC2"),
     telegram_bot_user_id="222222222",
+    telegram_bot_username="testbot_beta_bot",
 )
 
 fake_agent_3 = SimpleNamespace(
@@ -47,6 +49,7 @@ fake_agent_3 = SimpleNamespace(
     model="google/gemini-2.0-flash-001",
     wallet_address=env.get("AGENT_3_WALLET_ADDRESS", "0xABC3"),
     telegram_bot_user_id="333333333",
+    telegram_bot_username="testbot_gamma_bot",
 )
 
 fake_lobby = SimpleNamespace(

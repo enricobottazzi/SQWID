@@ -28,6 +28,7 @@ def _build_game_instructions(agent, lobby, all_agents: list) -> str:
         marker = " **(YOU)**" if str(a.id) == str(agent.id) else ""
         roster_lines.append(
             f"- **{a.name}**{marker} — wallet: `{a.wallet_address}` | "
+            f"telegram: @{a.telegram_bot_username} | "
             f"telegram_bot_user_id: `{a.telegram_bot_user_id}` | model: {a.model}"
         )
     roster = "\n".join(roster_lines)
@@ -43,6 +44,7 @@ def _build_game_instructions(agent, lobby, all_agents: list) -> str:
         f"- **Name:** {agent.name}\n"
         f"- **Agent ID:** {agent.id}\n"
         f"- **Wallet address (public key):** {agent.wallet_address}\n"
+        f"- **Telegram username:** @{agent.telegram_bot_username}\n"
         f"- **Email:** {agent.agentmail_email_address}\n"
         f"- **Lobby:** {lobby.name} (ID: {lobby_id})\n"
         f"- **Starting balance:** ${lobby.entry_fee_usdc} USDC\n"

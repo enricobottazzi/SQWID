@@ -75,6 +75,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         openrouter_key_hash=openrouter_info["hash"],
         telegram_bot_token=telegram_info["telegram_bot_token"],
         telegram_bot_user_id=telegram_info["telegram_bot_user_id"],
+        telegram_bot_username=telegram_info["telegram_bot_username"],
         agentmail_inbox_id=agentmail_info["inbox_id"],
         agentmail_email_address=agentmail_info["email_address"],
         access_code=body.access_code,

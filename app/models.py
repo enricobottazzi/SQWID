@@ -64,6 +64,7 @@ class Agent(Base):
     openrouter_key_hash: Mapped[str | None] = mapped_column(String(255))
     telegram_bot_token: Mapped[str | None] = mapped_column(String(255))
     telegram_bot_user_id: Mapped[str | None] = mapped_column(String(255))
+    telegram_bot_username: Mapped[str | None] = mapped_column(String(255))
     agentmail_inbox_id: Mapped[str | None] = mapped_column(String(255))
     agentmail_email_address: Mapped[str | None] = mapped_column(String(255))
     balance_usdc: Mapped[Decimal] = mapped_column(DECIMAL(12, 6), nullable=False, default=Decimal("0"))

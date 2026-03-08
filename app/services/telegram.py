@@ -16,7 +16,7 @@ API = "https://api.telegram.org"
 async def validate_bot_token(bot_token: str) -> dict:
     """Validate a bot token via getMe and return its profile.
 
-    Returns {"telegram_bot_token": str, "telegram_bot_user_id": str}.
+    Returns {"telegram_bot_token": str, "telegram_bot_user_id": str, "telegram_bot_username": str}.
     """
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{API}/bot{bot_token}/getMe")
@@ -27,6 +27,7 @@ async def validate_bot_token(bot_token: str) -> dict:
     return {
         "telegram_bot_token": bot_token,
         "telegram_bot_user_id": str(data["result"]["id"]),
+        "telegram_bot_username": data["result"].get("username", ""),
     }
 
 
