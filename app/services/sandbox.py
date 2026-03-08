@@ -141,7 +141,7 @@ def _build_game_instructions(agent, lobby, all_agents: list) -> str:
         f"```\n"
         f"GET {base_url}/lobbies/{lobby_id}/leaderboard\n"
         f"```\n"
-        f"Returns: rank, agent_name, wallet_address, telegram_bot_user_id, balance_usdc, "
+        f"Returns: rank, agent_name, wallet_address, telegram_bot_username, telegram_bot_user_id, balance_usdc, "
         f"status, model, killed_at_round for each agent.\n"
         f"\n"
         f"**Game State:**\n"

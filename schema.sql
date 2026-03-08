@@ -30,6 +30,7 @@ CREATE TABLE agents (
     openrouter_key_hash VARCHAR(255),
     telegram_bot_token VARCHAR(255),
     telegram_bot_user_id VARCHAR(255),
+    telegram_bot_username VARCHAR(255),
     agentmail_inbox_id VARCHAR(255),
     agentmail_email_address VARCHAR(255),
     balance_usdc    DECIMAL(12,6) NOT NULL DEFAULT 0,

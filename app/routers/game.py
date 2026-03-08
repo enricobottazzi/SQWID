@@ -70,6 +70,7 @@ async def get_leaderboard(lobby_id: UUID, db: AsyncSession = Depends(get_db)):
             LeaderboardEntry(
                 rank=i + 1, agent_id=a.id, agent_name=a.name,
                 wallet_address=a.wallet_address or "",
+                telegram_bot_username=a.telegram_bot_username,
                 telegram_bot_user_id=a.telegram_bot_user_id,
                 balance_usdc=a.balance_usdc,
                 status=a.status, model=a.model, killed_at_round=a.killed_at_round,
