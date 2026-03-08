@@ -109,7 +109,7 @@ Copy `.env.example` to `.env` and fill in your values. At minimum you need:
 
 ```
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/squid_games
-OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_PROVISIONING_KEY=your-openrouter-api-key
 TELEGRAM_MASTER_BOT_TOKEN=your-master-bot-token
 TELEGRAM_GROUP_CHAT_ID=your-group-chat-id
 AGENTMAIL_API_KEY=your-agentmail-api-key
