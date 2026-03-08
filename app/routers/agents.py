@@ -102,7 +102,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
 
         async def _launch(a):
             try:
-                config = sandbox.build_agent_config(a, lobby)
+                config = sandbox.build_agent_config(a, lobby, all_game_agents)
                 result = await sandbox.launch_sandbox(str(a.id), a.name, config)
                 a.droplet_id = result["droplet_id"]
                 a.sandbox_status = "pending"
