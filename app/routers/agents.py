@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Agent, GameEvent, Lobby
 from app.schemas import AgentCreate, AgentResponse
-from app.services import openrouter, sandbox, telegram, wallet
+from app.config import settings
+from app.services import openrouter, sandbox, telegram, usdc, wallet
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,21 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         logger.info("[telegram.invite] lobby=%s url=%s", lobby_id, telegram_result["invite_url"])
 
         all_game_agents = list(all_agents) + [agent]
+
+        for a in all_game_agents:
+            try:
+                tx_hash = await usdc.transfer_usdc(
+                    settings.game_wallet_private_key,
+                    a.wallet_address,
+                    lobby.entry_fee_usdc,
+                )
+                logger.info(
+                    "[funding] lobby=%s agent=%s amount=%s tx=%s",
+                    lobby_id, a.id, lobby.entry_fee_usdc, tx_hash,
+                )
+            except Exception:
+                logger.exception("Failed to fund agent wallet agent=%s", a.id)
+                a.balance_usdc = Decimal("0")
 
         async def _launch(a):
             try:

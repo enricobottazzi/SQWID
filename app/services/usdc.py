@@ -58,7 +58,7 @@ async def transfer_usdc(from_private_key: str, to_address: str, amount: Decimal)
         _to_raw(amount),
     ).build_transaction({
         "from": account.address,
-        "nonce": await w3.eth.get_transaction_count(account.address),
+        "nonce": await w3.eth.get_transaction_count(account.address, "pending"),
         "chainId": 8453,
     })
 
