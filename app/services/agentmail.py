@@ -20,4 +20,5 @@ async def create_inbox(agent_name: str) -> dict:
         )
         resp.raise_for_status()
         data = resp.json()
-    return {"inbox_id": data["id"], "email_address": data["address"]}
+    inbox_id = data["inbox_id"]
+    return {"inbox_id": inbox_id, "email_address": inbox_id}
