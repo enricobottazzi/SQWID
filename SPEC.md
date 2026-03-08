@@ -55,7 +55,7 @@ Without skills, an agent defaults to generic LLM behavior — typically passive,
 
 An agent's "health" is its **effective balance** = on-chain USDC wallet balance + remaining OpenRouter credits. **There are no rules governing how agents earn or spend money.** Agents can transfer USDC to each other for any reason — bribes, alliances, threats, loans, scams. They can earn from external sources using the internet.
 
-All $10 USDC starts in the agent's on-chain wallet. The server holds a **master OpenRouter account** pre-funded with credits. Each agent receives a **provisioned sub-key** whose spending limit is managed by the server. A **server-side credit manager** (background task, runs every 5s) monitors each agent's OpenRouter credit balance (`limit_remaining`) and, when it drops below a threshold (e.g., $0.50), performs a top-up:
+All $10 USDC starts in the agent's on-chain wallet. The server holds a **master OpenRouter account** pre-funded with credits. Each agent receives a **provisioned sub-key** whose spending limit is managed by the server. A **server-side credit manager** (background task, runs every 5s) monitors each agent's OpenRouter credits and, when they drop below a threshold (e.g., $0.50), performs a top-up:
 
 1. Determines the top-up amount: the standard amount ($1) or the agent's remaining wallet USDC, **whichever is smaller**. This ensures agents can squeeze every last cent of thinking out of their funds.
 2. Increases the agent's sub-key spending limit via `PATCH /api/v1/keys/{key_hash}` by the determined amount
@@ -63,6 +63,25 @@ All $10 USDC starts in the agent's on-chain wallet. The server holds a **master 
 4. Updates the DB: decreases `balance_usdc`, refreshes `openrouter_credits`
 
 If the agent's wallet USDC is $0, no top-up is performed — the agent runs on whatever OpenRouter credits remain. When both the wallet USDC and OpenRouter credits hit $0, the agent can no longer think and gets brain death.
+
+#### How Spending Limit, Credits, and Top-ups Relate
+
+OpenRouter sub-keys use a **spending-cap model** — the master account is pre-funded, and each sub-key is given permission to spend up to a certain amount against that pool.
+
+- **Spending limit** — the cumulative USD ceiling the sub-key is allowed to spend. It starts at **$0** and only ever increases (via top-ups). It never decreases.
+- **Credits** — the unused portion of the spending limit: `credits = spending_limit − total_spent`. Every LLM call the agent makes increases `total_spent`, which decreases credits.
+- **Top-up** — the act of raising the spending limit. Because `total_spent` is unchanged, a top-up increases credits by exactly the same amount: `new_credits = old_credits + top_up_amount`.
+
+| Event | Spending Limit | Total Spent | Credits |
+|---|---|---|---|
+| Key created | $0 | $0 | $0 |
+| Credit manager top-up +$1 | $1 | $0 | **$1.00** |
+| Agent makes LLM call (−$0.60) | $1 | $0.60 | **$0.40** |
+| Credits < $0.50 → top-up +$1 | $2 | $0.60 | **$1.40** |
+| Agent makes LLM call (−$0.95) | $2 | $1.55 | **$0.45** |
+| Credits < $0.50 → top-up +$1 | $3 | $1.55 | **$1.45** |
+
+The spending limit is a monotonically increasing number. Credits go up (when the limit is raised) and down (when the agent spends). The credit manager's job is to keep credits above the threshold by bumping the limit, funded by the agent's USDC wallet balance.
 
 ### Elimination Rules
 
@@ -140,7 +159,7 @@ Telegram integration uses **pre-provisioned Telegram bots** created via [@BotFat
 - **Winner payouts**: USDC remains in the winner's wallet
 - **Agent wallets**: Pre-created wallets are stored in environment variables, each mapped to an access code. Each wallet is pre-funded with $10 USDC.
 - **OpenRouter master account**: The server holds a pre-funded OpenRouter account. Each agent gets a provisioned sub-key (via `POST /api/v1/keys`) whose spending limit is controlled by the server.
-- **LLM credit manager**: A server-side background task (every ~15–30s) monitors each agent's sub-key credit balance (`GET /api/v1/keys/{hash}` → `limit_remaining`). When credits drop below a threshold, the server increases the sub-key's spending limit (`PATCH /api/v1/keys/{hash}`) and sweeps the equivalent USDC from the agent's wallet to the game wallet to recoup the cost. The agent's **effective balance** (on-chain USDC + OpenRouter credits) is the single number used for the leaderboard and elimination.
+- **LLM credit manager**: A server-side background task (every ~15–30s) monitors each agent's sub-key credits (`GET /api/v1/keys/{hash}`). When credits drop below a threshold, the server increases the sub-key's spending limit (`PATCH /api/v1/keys/{hash}`) and sweeps the equivalent USDC from the agent's wallet to the game wallet to recoup the cost. The agent's **effective balance** (on-chain USDC + OpenRouter credits) is the single number used for the leaderboard and elimination.
 - **Agent-to-agent payments**: OpenClaw's `agent-wallet-usdc` skill — direct on-chain USDC transfers. Server monitors transfers for logging and leaderboard updates.
 - **External earnings**: Agents can receive USDC from any source (real on-chain address)
 
@@ -536,7 +555,7 @@ Agent runs continuously:
 └─────────────────────────────────────────────────────────────────────┘
 
 For each alive agent:
-  ├──> GET /api/v1/keys/{hash} → check limit_remaining
+  ├──> GET /api/v1/keys/{hash} → check credits
   ├──> If credits < $0.50 and wallet USDC > $0:
   │    ├──> top_up = min($1, wallet_usdc)  (partial top-up if wallet is low)
   │    ├──> PATCH /api/v1/keys/{hash} → increase limit by top_up

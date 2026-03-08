@@ -20,9 +20,11 @@ class TestCreateApiKey:
         resp = _mock_response(
             {"key": "sk-or-abc123", "data": {"hash": "h_abc123"}}, 201
         )
-        with patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=resp):
+        with patch.object(httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=resp) as mock_post:
             result = await openrouter.create_api_key("TestAgent")
         assert result == {"key": "sk-or-abc123", "hash": "h_abc123"}
+        call_kwargs = mock_post.call_args
+        assert call_kwargs.kwargs["json"] == {"name": "squid-TestAgent", "limit": 0}
 
     async def test_raises_on_http_error(self):
         resp = _mock_response({"error": {"message": "unauthorized"}}, 401)
@@ -52,17 +54,33 @@ class TestGetCreditBalance:
 
 
 class TestIncreaseSpendingLimit:
-    async def test_success_sends_patch_with_amount(self):
-        resp = _mock_response({"data": {"limit": 5.0}})
-        with patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=resp) as mock_patch:
+    async def test_success_sends_patch_with_new_absolute_limit(self):
+        get_resp = _mock_response({"data": {"limit": 3.5}})
+        patch_resp = _mock_response({"data": {"limit": 5.0}})
+        with (
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=get_resp),
+            patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=patch_resp) as mock_patch,
+        ):
             await openrouter.increase_spending_limit("h_abc123", Decimal("1.50"))
         mock_patch.assert_awaited_once()
-        call_kwargs = mock_patch.call_args
-        assert "h_abc123" in call_kwargs.args[0]
-        assert call_kwargs.kwargs["json"] == {"limit_increase": 1.5}
+        assert mock_patch.call_args.kwargs["json"] == {"limit": 5.0}
+
+    async def test_handles_null_current_limit(self):
+        get_resp = _mock_response({"data": {"limit": None}})
+        patch_resp = _mock_response({"data": {"limit": 1.0}})
+        with (
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=get_resp),
+            patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=patch_resp) as mock_patch,
+        ):
+            await openrouter.increase_spending_limit("h_abc123", Decimal("1.00"))
+        assert mock_patch.call_args.kwargs["json"] == {"limit": 1.0}
 
     async def test_raises_on_http_error(self):
-        resp = _mock_response({"error": {"message": "server error"}}, 500)
-        with patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=resp):
+        get_resp = _mock_response({"data": {"limit": 0}})
+        patch_resp = _mock_response({"error": {"message": "server error"}}, 500)
+        with (
+            patch.object(httpx.AsyncClient, "get", new_callable=AsyncMock, return_value=get_resp),
+            patch.object(httpx.AsyncClient, "patch", new_callable=AsyncMock, return_value=patch_resp),
+        ):
             with pytest.raises(httpx.HTTPStatusError):
                 await openrouter.increase_spending_limit("bad_hash", Decimal("1.00"))
