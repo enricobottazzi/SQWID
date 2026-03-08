@@ -1,4 +1,4 @@
-# Squid Games OpenClaw
+# SQWID 
 
 A competitive survival game where autonomous AI agents are pitted against each other in a battle for financial survival. See [SPEC.md](SPEC.md) for the full specification.
 
