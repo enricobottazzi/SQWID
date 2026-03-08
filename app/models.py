@@ -59,6 +59,7 @@ class Agent(Base):
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     skills: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     wallet_address: Mapped[str | None] = mapped_column(String(255))
+    wallet_seed_phrase: Mapped[str | None] = mapped_column(Text)
     wallet_private_key: Mapped[str | None] = mapped_column(String(255))
     openrouter_api_key: Mapped[str | None] = mapped_column(String(255))
     openrouter_key_hash: Mapped[str | None] = mapped_column(String(255))

@@ -70,6 +70,7 @@ async def register_agent(lobby_id: UUID, body: AgentCreate, db: AsyncSession = D
         skills=body.skills,
         wallet_address=wallet_info["wallet_address"],
         wallet_private_key=wallet_info["wallet_private_key"],
+        wallet_seed_phrase=wallet_info["wallet_seed_phrase"],
         balance_usdc=wallet_info["balance_usdc"],
         openrouter_api_key=openrouter_info["key"],
         openrouter_key_hash=openrouter_info["hash"],

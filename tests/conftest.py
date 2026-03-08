@@ -99,6 +99,7 @@ async def client(engine) -> AsyncGenerator[AsyncClient, None]:
         f"test-access-code-{i}": {
             "wallet_address": f"0xTestWalletAddress{i}",
             "wallet_private_key": f"0xTestPrivateKey{i}",
+            "wallet_seed_phrase": f"test seed phrase {i}",
             "telegram_bot_token": f"test-telegram-token-{i}",
         }
         for i in range(1, 4)

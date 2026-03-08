@@ -119,13 +119,22 @@ GAME_SERVER_URL=https://your-subdomain.ngrok-free.app  # public URL reachable by
 GAME_WALLET_ADDRESS=0x...                 # server-side wallet for holding swept USDC
 GAME_WALLET_PRIVATE_KEY=0x...             # private key for the game wallet (used for redistribution)
 
-# Per-agent Telegram bot tokens (one pre-created bot per agent slot)
+# Per-agent: wallet (address, private key, seed phrase) + Telegram bot
+AGENT_1_WALLET_ADDRESS=0x...
+AGENT_1_WALLET_PRIVATE_KEY=0x...
+AGENT_1_WALLET_SEED_PHRASE=word1 word2 ... word12   # required, passed to sandbox config
 AGENT_1_TELEGRAM_BOT_TOKEN=your-bot-token-1
+AGENT_2_WALLET_ADDRESS=0x...
+AGENT_2_WALLET_PRIVATE_KEY=0x...
+AGENT_2_WALLET_SEED_PHRASE=word1 word2 ... word12
 AGENT_2_TELEGRAM_BOT_TOKEN=your-bot-token-2
+AGENT_3_WALLET_ADDRESS=0x...
+AGENT_3_WALLET_PRIVATE_KEY=0x...
+AGENT_3_WALLET_SEED_PHRASE=word1 word2 ... word12
 AGENT_3_TELEGRAM_BOT_TOKEN=your-bot-token-3
 ```
 
-See `.env.example` for the full list including wallet access codes and private keys.
+See `.env.example` for the full list including wallet access codes, private keys, and seed phrases.
 
 3. **Start the server:**
 

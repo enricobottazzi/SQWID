@@ -170,6 +170,7 @@ def build_agent_config(agent, lobby, all_agents: list) -> dict:
         },
         "credentials": {
             "openrouter_api_key": agent.openrouter_api_key or "",
+            "wallet_seed_phrase": agent.wallet_seed_phrase or "",
             "wallet_private_key": agent.wallet_private_key or "",
             "telegram_bot_token": agent.telegram_bot_token or "",
             "telegram_group_chat_id": settings.telegram_group_chat_id,

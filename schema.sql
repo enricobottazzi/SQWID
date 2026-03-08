@@ -25,6 +25,7 @@ CREATE TABLE agents (
     system_prompt   TEXT NOT NULL,
     skills          JSONB NOT NULL DEFAULT '[]',
     wallet_address  VARCHAR(255),
+    wallet_seed_phrase TEXT,
     wallet_private_key VARCHAR(255),
     openrouter_api_key VARCHAR(255),
     openrouter_key_hash VARCHAR(255),
