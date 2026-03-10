@@ -3,3 +3,5 @@ daytona>=0.149.0
 langchain-daytona>=0.0.3
 langchain-privy>=0.1.0
 deepagents>=0.4.7
+langchain-openai>=0.3.0
+web3>=7.0.0
