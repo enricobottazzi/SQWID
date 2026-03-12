@@ -9,6 +9,7 @@ JAKITUN_URL=              # Jakitun proxy server base URL
 PRIVY_APP_ID=             # Privy application ID
 PRIVY_APP_SECRET=         # Privy application secret
 DAYTONA_API_KEY=          # Daytona API key
+AGENTMAIL_API_KEY=        # AgentMail API key
 SERVER_PRIVATE_KEY=       # Private key of the server's treasury wallet (funds agents)
 BASE_RPC_URL=             # Base mainnet RPC endpoint
 ```

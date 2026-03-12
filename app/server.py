@@ -19,7 +19,7 @@ def start_game(req: StartRequest):
     agents = [create_agent(a) for a in req.agents]
     current_game = {"game_id": game_id, "agents": agents, "status": "running"}
     scheduler.add_job(tick, "interval", seconds=5, args=[current_game], id=game_id)
-    return {"game_id": game_id, "agents": [{"name": a["name"], "wallet_address": a["wallet_address"]} for a in agents]}
+    return {"game_id": game_id, "agents": [{"name": a["name"], "wallet_address": a["wallet_address"], "inbox": a["inbox"]} for a in agents]}
 
 @app.get("/state")
 def get_state():
@@ -28,7 +28,7 @@ def get_state():
     return {
         "game_id": current_game["game_id"],
         "agents": [
-            {"name": a["name"], "wallet_address": a["wallet_address"], "usdc_balance": get_usdc_balance(a["wallet_address"])}
+            {"name": a["name"], "wallet_address": a["wallet_address"], "usdc_balance": get_usdc_balance(a["wallet_address"]), "inbox": a["inbox"]}
             for a in current_game["agents"]
         ],
     }

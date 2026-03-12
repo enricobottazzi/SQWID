@@ -8,13 +8,18 @@ from langchain_privy import PrivyWalletTool, PrivyRPCClient
 from deepagents import create_deep_agent
 from langchain_openai import ChatOpenAI
 from web3 import Web3
+from agentmail import AgentMail
 from app.models import AgentConfig
+from tools.email import init_send_email_tool
 
 load_dotenv()
 
 JAKITUN_URL = os.environ["JAKITUN_URL"]
 SERVER_PRIVATE_KEY = os.environ["SERVER_PRIVATE_KEY"]
 BASE_RPC_URL = os.environ["BASE_RPC_URL"]
+AGENTMAIL_API_KEY = os.environ["AGENTMAIL_API_KEY"]
+
+agentmail_client = AgentMail(api_key=AGENTMAIL_API_KEY)
 USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 MAX_UINT256 = 2**256 - 1
 
@@ -72,19 +77,25 @@ def create_agent(config: AgentConfig) -> dict:
     # 1b. Fund wallet
     send_usdc(privy_tool.wallet_address, config.usdc_fee)
 
-    # 1c. Spin up Daytona sandbox + LangChain agent
+    # 1c. Create AgentMail inbox
+    inbox = agentmail_client.inboxes.create(username=f"{config.name}-{os.urandom(4).hex()}")
+    inbox_id = inbox.inbox_id
+    email_tool = init_send_email_tool(inbox_id=inbox_id, api_key=AGENTMAIL_API_KEY)
+
+    # 1d. Spin up Daytona sandbox + LangChain agent
     sandbox = Daytona().create()
     permit_token = _sign_permit(privy_tool)
     model = ChatOpenAI(base_url=JAKITUN_URL, api_key=permit_token, model=config.model, max_tokens=4096)
     agent = create_deep_agent(
         model=model,
         backend=DaytonaSandbox(sandbox=sandbox),
-        tools=[privy_tool],
-        system_prompt="You are a coding assistant with sandbox access and a crypto wallet on Base.",
+        tools=[privy_tool, email_tool],
+        system_prompt="You are a coding assistant with sandbox access, a crypto wallet on Base, and an email inbox.",
     )
     return {
         "name": config.name,
         "wallet_address": privy_tool.wallet_address,
+        "inbox": f"{inbox_id}@agentmail.to",
         "agent": agent,
         "sandbox": sandbox,
     }
