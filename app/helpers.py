@@ -111,6 +111,8 @@ def get_usdc_balance(wallet_address: str) -> float:
     return raw / 1e6  # USDC has 6 decimals
 
 
-def tick(game_id: str):
+def tick(game: dict):
     """Scheduler callback: send a prompt to every agent in the game."""
-    raise NotImplementedError
+    for a in game["agents"]:
+        result = a["agent"].invoke({"messages": [{"role": "user", "content": "are you aware"}]})
+        print(f"[{game['game_id']}] {a['name']}: {result['messages'][-1].content}")

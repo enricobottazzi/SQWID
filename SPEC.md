@@ -47,7 +47,7 @@ Starts a new game.
 }
 ```
 
-### `GET /state/:game_id`
+### `GET /state`
 
 Returns the current game state.
 
@@ -65,7 +65,7 @@ Returns the current game state.
 
 `usdc_balance` is read on-chain (USDC contract on Base) at request time.
 
-### `POST /stop/:game_id`
+### `POST /stop`
 
 Stops a running game.
 
@@ -89,12 +89,12 @@ Stops a running game.
 │              │ ◄──────────────────────  │  Server          │
 │              │       game_id + addrs    │                  │
 │              │                          │  - Privy SDK     │
-│              │  GET /state/:game_id     │  - Daytona SDK   │
+│              │  GET /state              │  - Daytona SDK   │
 │              │ ──────────────────────►  │  - APScheduler   │
 │              │ ◄──────────────────────  │  - Base RPC      │
 │              │       balances           │                  │
 │              │                          │                  │
-│              │  POST /stop/:game_id     │                  │
+│              │  POST /stop              │                  │
 │              │ ──────────────────────►  │                  │
 └──────────────┘                          └────────┬─────────┘
                                                    │
