@@ -2,7 +2,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.models import StartRequest
-from app.helpers import create_agent, get_usdc_balance, tick
+from app.helpers import create_agent, cleanup_agent, get_usdc_balance, tick
 
 app = FastAPI()
 scheduler = BackgroundScheduler()
@@ -19,7 +19,7 @@ def start_game(req: StartRequest):
     agents = [create_agent(a) for a in req.agents]
     current_game = {"game_id": game_id, "agents": agents, "status": "running"}
     scheduler.add_job(tick, "interval", seconds=5, args=[current_game], id=game_id)
-    return {"game_id": game_id, "agents": [{"name": a["name"], "wallet_address": a["wallet_address"], "inbox": a["inbox"]} for a in agents]}
+    return {"game_id": game_id, "agents": [{"name": a["name"], "wallet_address": a["wallet_address"], "inbox_id": a["inbox_id"]} for a in agents]}
 
 @app.get("/state")
 def get_state():
@@ -28,7 +28,7 @@ def get_state():
     return {
         "game_id": current_game["game_id"],
         "agents": [
-            {"name": a["name"], "wallet_address": a["wallet_address"], "usdc_balance": get_usdc_balance(a["wallet_address"]), "inbox": a["inbox"]}
+            {"name": a["name"], "wallet_address": a["wallet_address"], "usdc_balance": get_usdc_balance(a["wallet_address"]), "inbox_id": a["inbox_id"]}
             for a in current_game["agents"]
         ],
     }
@@ -40,6 +40,6 @@ def stop_game():
         raise HTTPException(404, "No game running")
     scheduler.remove_job(current_game["game_id"])
     for a in current_game["agents"]:
-        a["sandbox"].stop()
+        cleanup_agent(a)
     current_game["status"] = "stopped"
     return {"game_id": current_game["game_id"], "status": "stopped"}
