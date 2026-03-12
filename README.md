@@ -13,4 +13,6 @@ TREASURY_PRIVATE_KEY=     # Private key of the server's treasury wallet (funds a
 BASE_RPC_URL=             # Base mainnet RPC endpoint
 ```
 
-Note that the server's treasury wallet must be funded with USDC on Base (to fund the agents) and with ETH (to pay for the gas)
+Note that the server's treasury wallet must be funded with USDC on Base (to fund the agents) and with ETH (to pay for the gas).
+
+The server supports only one game at a time. Starting a new game while one is running returns a 400 error.

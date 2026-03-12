@@ -1,31 +1,30 @@
-from uuid import uuid4
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
 from apscheduler.schedulers.background import BackgroundScheduler
+from app.models import StartRequest
 from app.helpers import create_agent, send_usdc, get_usdc_balance, tick
 
 app = FastAPI()
 scheduler = BackgroundScheduler()
 scheduler.start()
 
-games: dict = {}
-
-class AgentConfig(BaseModel):
-    name: str
-    model: str
-    usdc_fee: float
-
-class StartRequest(BaseModel):
-    agents: list[AgentConfig]
+current_game: dict | None = None
 
 @app.post("/start")
 def start_game(req: StartRequest):
+    global current_game
+    if current_game and current_game["status"] == "running":
+        raise HTTPException(400, "A game is already running")
     raise NotImplementedError
 
-@app.get("/state/{game_id}")
-def get_state(game_id: str):
+@app.get("/state")
+def get_state():
+    if not current_game:
+        raise HTTPException(404, "No game running")
     raise NotImplementedError
 
-@app.post("/stop/{game_id}")
-def stop_game(game_id: str):
+@app.post("/stop")
+def stop_game():
+    global current_game
+    if not current_game or current_game["status"] != "running":
+        raise HTTPException(404, "No game running")
     raise NotImplementedError

@@ -1,4 +1,6 @@
-def create_agent(config) -> dict:
+from app.models import AgentConfig
+
+def create_agent(config: AgentConfig) -> dict:
     """Create Privy wallet, fund it, spin up Daytona sandbox, return agent handle."""
     raise NotImplementedError
 
